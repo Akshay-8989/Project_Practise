@@ -1,0 +1,14 @@
+cd D:\compliance_copilot
+python -c "
+import sys
+sys.path.insert(0, '.')
+from src.vector_store import ComplianceVectorStore
+from pathlib import Path
+
+store = ComplianceVectorStore(Path('data/vectorstore'))
+print('Chunks in store:', store.document_count())
+results = store.similarity_search('What documents are required for KYC?', k=3)
+print('Search results:', len(results))
+for doc, score in results:
+    print(f'  Score: {score:.3f} | Page: {doc.metadata[\"page\"]} | {doc.page_content[:100]}')
+"
