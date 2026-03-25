@@ -12,3 +12,22 @@ print('Search results:', len(results))
 for doc, score in results:
     print(f'  Score: {score:.3f} | Page: {doc.metadata[\"page\"]} | {doc.page_content[:100]}')
 "
+
+
+
+cd D:\compliance_copilot
+python -c "
+import sys
+sys.path.insert(0, '.')
+from src.config import PHI2_MODEL_NAME
+print('Phi-2 path set to:', PHI2_MODEL_NAME)
+
+from src.llm_engine import get_llm
+try:
+    llm = get_llm(model_name=PHI2_MODEL_NAME)
+    print('Phi-2 loaded OK')
+    result = llm.generate('What is KYC? Answer in one sentence.')
+    print('Output:', result)
+except Exception as e:
+    print('ERROR:', e)
+"
