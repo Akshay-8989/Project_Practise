@@ -31,3 +31,194 @@ try:
 except Exception as e:
     print('ERROR:', e)
 "
+
+"""
+app.py  –  GenAI Banking Policy & Compliance Copilot
+Run with:  streamlit run app.py
+"""
+from __future__ import annotations
+import logging, sys, time, traceback
+from pathlib import Path
+
+import streamlit as st
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+from src.config import (
+    APP_TITLE, CHUNK_OVERLAP, CHUNK_SIZE,
+    MAX_NEW_TOKENS, PHI2_MODEL_NAME, TEMPERATURE, TOP_K_RESULTS,
+    UPLOAD_DIR,
+)
+
+logging.basicConfig(level=logging.INFO)
+
+st.set_page_config(page_title=APP_TITLE, page_icon="🏦",
+                   layout="wide", initial_sidebar_state="expanded")
+
+st.markdown("""
+<style>
+.main-header {
+    background: linear-gradient(135deg, #1a2744 0%, #0d3b6e 50%, #1565c0 100%);
+    padding: 1.5rem 2rem; border-radius: 12px; margin-bottom: 1rem; color: white;
+}
+.main-header h1 { margin: 0; font-size: 1.8rem; }
+.main-header p  { margin: 0.3rem 0 0; opacity: 0.8; font-size: 0.9rem; }
+.badge-green  { color: #2e7d32; font-weight: 600; }
+.badge-orange { color: #e65100; font-weight: 600; }
+#MainMenu { visibility: hidden; }
+footer    { visibility: hidden; }
+</style>
+""", unsafe_allow_html=True)
+
+# ── Session state ─────────────────────────────────────────────────────────────
+for k, v in {"messages": [], "indexed_files": []}.items():
+    if k not in st.session_state:
+        st.session_state[k] = v
+
+# ── Pipeline ──────────────────────────────────────────────────────────────────
+@st.cache_resource(show_spinner=False)
+def get_pipeline():
+    from src.rag_pipeline import ComplianceRAGPipeline
+    return ComplianceRAGPipeline(
+        top_k=TOP_K_RESULTS, model_name=PHI2_MODEL_NAME,
+        max_new_tokens=MAX_NEW_TOKENS, temperature=TEMPERATURE,
+    )
+
+# ── Sidebar ───────────────────────────────────────────────────────────────────
+with st.sidebar:
+    st.markdown("## 🏦 Compliance Copilot")
+    st.markdown("---")
+    st.markdown("### 📄 Upload Policy Documents")
+
+    uploaded_files = st.file_uploader(
+        "Upload PDF documents", type=["pdf"], accept_multiple_files=True,
+    )
+
+    if uploaded_files:
+        pipeline = get_pipeline()
+        for uf in uploaded_files:
+            if uf.name not in st.session_state["indexed_files"]:
+                dest = UPLOAD_DIR / uf.name
+                with open(dest, "wb") as f:
+                    f.write(uf.getbuffer())
+                with st.spinner(f"Indexing {uf.name}…"):
+                    try:
+                        from src.document_processor import load_and_chunk_pdf
+                        chunks = load_and_chunk_pdf(dest, CHUNK_SIZE, CHUNK_OVERLAP)
+                        pipeline.vectorstore.add_documents(chunks)
+                        st.session_state["indexed_files"].append(uf.name)
+                        st.success(f"✅ {uf.name} — {len(chunks)} chunks")
+                    except Exception as exc:
+                        st.error(f"❌ {uf.name}: {exc}")
+
+    st.markdown("---")
+    st.markdown("### 📊 Index Status")
+    try:
+        pipeline  = get_pipeline()
+        doc_count = pipeline.vectorstore.document_count()
+        if doc_count > 0:
+            st.markdown(f'<span class="badge-green">● {doc_count} chunks indexed</span>',
+                        unsafe_allow_html=True)
+            for fname in st.session_state["indexed_files"]:
+                st.markdown(f"  • {fname}")
+        else:
+            st.markdown('<span class="badge-orange">● No documents yet</span>',
+                        unsafe_allow_html=True)
+    except Exception as exc:
+        st.error(str(exc))
+
+    st.markdown("---")
+    with st.expander("⚙️ Settings"):
+        st.markdown(f"**Phi-2:** `{PHI2_MODEL_NAME}`")
+        st.markdown(f"**Embedding:** TF-IDF (offline)")
+        st.markdown(f"**Chunk size:** {CHUNK_SIZE} | **Top-K:** {TOP_K_RESULTS}")
+        st.markdown(f"**Max tokens:** {MAX_NEW_TOKENS}")
+
+    if st.button("🗑️ Clear Chat"):
+        st.session_state["messages"] = []
+        st.rerun()
+
+# ── Main panel ────────────────────────────────────────────────────────────────
+st.markdown(f"""
+<div class="main-header">
+    <h1>🏦 {APP_TITLE}</h1>
+    <p>Ask questions about KYC, AML, loan policies, and risk management guidelines</p>
+</div>
+""", unsafe_allow_html=True)
+
+# ── Render existing chat messages ─────────────────────────────────────────────
+for msg in st.session_state["messages"]:
+    with st.chat_message(msg["role"]):
+        st.write(msg["content"])
+        if msg.get("error"):
+            st.warning(f"LLM Error: {msg['error']}")
+        if msg.get("sources"):
+            with st.expander(f"📚 Sources ({len(msg['sources'])} cited)"):
+                for s in msg["sources"]:
+                    st.markdown(f"**{s['document_name']}** — Page {s['page_number']} | {s['relevance_score']:.0%} match")
+                    st.caption(f"…{s['excerpt']}…")
+
+# ── Empty state ───────────────────────────────────────────────────────────────
+if not st.session_state["messages"]:
+    st.info("👆 Upload a policy PDF in the sidebar, then type your question below and press Enter.")
+
+# ── Chat input ────────────────────────────────────────────────────────────────
+question = st.chat_input("Ask a compliance question… e.g. What is the AML reporting threshold?")
+
+if question and question.strip():
+    question = question.strip()
+
+    # Show user message immediately
+    st.session_state["messages"].append({"role": "user", "content": question})
+    with st.chat_message("user"):
+        st.write(question)
+
+    # Generate answer
+    with st.chat_message("assistant"):
+        with st.spinner("Searching policy documents…"):
+            try:
+                t0       = time.time()
+                pipeline = get_pipeline()
+                response = pipeline.query(question)
+                elapsed  = time.time() - t0
+
+                answer = response.answer.strip() if response.answer else ""
+                if not answer:
+                    answer = "The model returned an empty response. Please rephrase your question."
+                else:
+                    answer += f"\n\n*⏱ {elapsed:.1f}s*"
+
+                st.write(answer)
+
+                sources_data = []
+                if response.sources:
+                    with st.expander(f"📚 Sources ({len(response.sources)} cited)"):
+                        for s in response.sources:
+                            st.markdown(f"**{s.document_name}** — Page {s.page_number} | {s.relevance_score:.0%} match")
+                            st.caption(f"…{s.excerpt}…")
+                            sources_data.append({
+                                "document_name":   s.document_name,
+                                "page_number":     s.page_number,
+                                "excerpt":         s.excerpt,
+                                "relevance_score": s.relevance_score,
+                            })
+
+                if response.error:
+                    st.warning(f"LLM Error: {response.error}")
+
+                st.session_state["messages"].append({
+                    "role":    "assistant",
+                    "content": answer,
+                    "error":   response.error,
+                    "sources": sources_data,
+                })
+
+            except Exception as exc:
+                err_msg = f"Error: {type(exc).__name__}: {exc}\n\n{traceback.format_exc()}"
+                st.error(err_msg)
+                st.session_state["messages"].append({
+                    "role":    "assistant",
+                    "content": f"⚠️ {type(exc).__name__}: {exc}",
+                    "error":   err_msg,
+                    "sources": [],
+                })
