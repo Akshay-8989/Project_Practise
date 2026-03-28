@@ -222,3 +222,7 @@ if question and question.strip():
                     "error":   err_msg,
                     "sources": [],
                 })
+
+❌ KYC_AML_Banking_Policy.pdf: numpy.core.multiarray failed to import
+
+Traceback (most recent call last): File "D:\Project\compliance_copilot\app.py", line 96, in <module> pipeline.vectorstore.add_documents(chunks) File "D:\Project\compliance_copilot\src\vector_store.py", line 188, in add_documents import faiss File "C:\Users\akshay.choudhari\AppData\Local\Programs\Python\Python311\Lib\site-packages\faiss_init_.py", line 29, in <module> from .loader import * File "C:\Users\akshay.choudhari\AppData\Local\Programs\Python\Python311\Lib\site-packages\faiss\loader.py", line 98, in <module> from .swigfaiss import * File "C:\Users\akshay.choudhari\AppData\Local\Programs\Python\Python311\Lib\site-packages\faiss\swigfaiss.py", line 10, in <module> from . import _swigfaiss ImportError: numpy.core.multiarray failed to import
