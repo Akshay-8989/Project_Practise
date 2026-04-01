@@ -1,0 +1,198 @@
+# Banking Compliance and Regulatory Framework
+
+## Introduction
+Banking compliance refers to the adherence of financial institutions to laws, regulations, guidelines, and specifications relevant to their business processes. Compliance ensures that banks operate within legal boundaries and maintain trust with customers, regulators, and stakeholders.
+
+Regulatory compliance in banking is critical due to the sensitive nature of financial data, the risk of fraud, and the need for economic stability. Institutions must implement strong internal controls, monitoring systems, and reporting mechanisms.
+
+---
+
+## Anti-Money Laundering (AML)
+Anti-Money Laundering (AML) regulations are designed to prevent criminals from disguising illegally obtained funds as legitimate income.
+
+### Key AML Requirements:
+- Customer Due Diligence (CDD)
+- Enhanced Due Diligence (EDD)
+- Suspicious Activity Reporting (SAR)
+- Transaction Monitoring Systems
+
+### AML Process:
+1. Identify customer
+2. Verify identity
+3. Monitor transactions
+4. Report suspicious activities
+
+Failure to comply with AML regulations can result in heavy penalties and reputational damage.
+
+---
+
+## Know Your Customer (KYC)
+KYC is a mandatory process for identifying and verifying customer identity when opening an account.
+
+### KYC Components:
+- Identity Verification
+- Address Verification
+- Risk Profiling
+
+Banks classify customers into:
+- Low Risk
+- Medium Risk
+- High Risk
+
+High-risk customers require enhanced monitoring.
+
+---
+
+## Data Privacy and Protection
+Financial institutions must ensure data privacy under regulations such as GDPR and local data protection laws.
+
+### Key Principles:
+- Data Minimization
+- Purpose Limitation
+- Consent Management
+- Secure Storage
+
+Data breaches can lead to:
+- Financial losses
+- Legal penalties
+- Loss of customer trust
+
+---
+
+## Fraud Detection and Prevention
+Banks implement fraud detection systems to identify suspicious transactions in real time.
+
+### Common Fraud Types:
+- Identity Theft
+- Credit Card Fraud
+- Phishing Attacks
+- Account Takeover
+
+### Detection Techniques:
+- Rule-based systems
+- Machine learning models
+- Behavioral analytics
+
+---
+
+## Risk Management
+Risk management involves identifying, assessing, and mitigating risks.
+
+### Types of Risks:
+- Credit Risk
+- Market Risk
+- Operational Risk
+- Liquidity Risk
+
+Banks use risk scoring models to evaluate exposure and implement mitigation strategies.
+
+---
+
+## Regulatory Reporting
+Banks must submit periodic reports to regulatory authorities.
+
+### Examples:
+- Financial statements
+- Suspicious transaction reports
+- Capital adequacy reports
+
+Automation of reporting ensures accuracy and compliance.
+
+---
+
+## Internal Controls and Audits
+Internal controls are mechanisms to ensure operational efficiency and compliance.
+
+### Control Measures:
+- Segregation of duties
+- Access control
+- Audit trails
+
+Regular audits help detect gaps and improve systems.
+
+---
+
+## Compliance Challenges
+- Increasing regulatory complexity
+- Data management issues
+- Integration of legacy systems
+- Real-time monitoring requirements
+
+---
+
+## Role of Technology in Compliance
+Technology plays a crucial role in modern compliance systems.
+
+### Technologies Used:
+- Artificial Intelligence
+- Machine Learning
+- Big Data Analytics
+- Blockchain
+
+These technologies improve:
+- Efficiency
+- Accuracy
+- Fraud detection capabilities
+
+---
+
+## Case Study: Fraud Detection System
+A bank implemented a machine learning-based fraud detection system that reduced fraudulent transactions by 35%.
+
+### Steps Taken:
+1. Data collection from transactions
+2. Feature engineering
+3. Model training
+4. Deployment in real-time pipeline
+
+---
+
+## Conclusion
+Banking compliance is essential for maintaining trust, security, and stability in the financial system. With increasing regulations and technological advancements, institutions must continuously evolve their compliance strategies.
+
+---
+
+## Frequently Asked Questions
+
+### What is AML?
+AML refers to Anti-Money Laundering regulations that prevent illegal financial activities.
+
+### What is KYC?
+KYC is the process of verifying customer identity.
+
+### Why is compliance important?
+Compliance ensures legal operation and builds trust.
+
+### What happens if a bank fails compliance?
+Penalties, legal actions, and reputational damage.
+
+---
+
+## Extended Content for Testing Retrieval
+
+The compliance system should be able to:
+- Retrieve relevant sections based on queries
+- Answer questions about AML, KYC, fraud detection
+- Summarize regulatory requirements
+- Handle long documents efficiently
+
+The system should also support:
+- Multi-document retrieval
+- Semantic search
+- Context-aware responses
+
+---
+
+## Repeated Section for Chunk Testing
+
+Compliance ensures that financial institutions follow rules and regulations.
+Compliance ensures that financial institutions follow rules and regulations.
+Compliance ensures that financial institutions follow rules and regulations.
+
+Fraud detection systems analyze transaction patterns.
+Fraud detection systems analyze transaction patterns.
+Fraud detection systems analyze transaction patterns.
+
+---
+
+## End of Document
