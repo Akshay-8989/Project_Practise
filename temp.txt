@@ -61,3 +61,16 @@ Traceback (most recent call last):
 AttributeError: 'AppConfig' object has no attribute 'artifact_base'
 
 [PIPELINE STOPPED] Feature engineering failed.
+
+@dataclass
+class AppConfig:
+    env:              str = field(default_factory=lambda: _e("APP_ENV", "development"))
+    log_level:        str = field(default_factory=lambda: _e("LOG_LEVEL", "INFO"))
+    log_file:         str = field(default_factory=lambda: _e("LOG_FILE", "logs/feature_engineering.log"))
+    version:          str = field(default_factory=lambda: _e("FEATURE_PIPELINE_VERSION", "v1"))
+    mode:             str = field(default_factory=lambda: _e("PIPELINE_MODE", "inference"))
+
+    artifact_base:    str = field(default_factory=lambda: _e("ARTIFACT_BASE_PATH",      "artifacts"))
+    vectorizer_path:  str = field(default_factory=lambda: _e("VECTORIZER_PATH",         "artifacts/vectorizers"))
+    encoder_path:     str = field(default_factory=lambda: _e("ENCODER_PATH",            "artifacts/encoders"))
+    embedding_cache:  str = field(default_factory=lambda: _e("EMBEDDING_CACHE_PATH",    "artifacts/embedding_cache"))
