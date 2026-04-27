@@ -27,3 +27,13 @@ Traceback (most recent call last):
 ImportError: cannot import name 'ClassicalFeatures' from 'schema' (D:\enterprise_platform\preprocessing\schema.py)
 
 [PIPELINE STOPPED] Feature engineering failed.
+from feature_engineering.config import CONFIG
+from feature_engineering.logger import get_logger
+from feature_engineering.validator import validate_preprocessed_payload
+from feature_engineering.stats_features import extract_stat_features
+from feature_engineering.metadata_encoder import encode_metadata
+from feature_engineering.keyword_features import extract_risk_features
+from feature_engineering.tfidf_engine import transform_document, get_engine as get_tfidf_engine
+from feature_engineering.embedding_engine import encode_text, get_engine as get_emb_engine
+from feature_engineering.chunk_aggregator import aggregate_chunk_embeddings
+from feature_engineering.feature_registry import get_registry, FeatureRegistry
