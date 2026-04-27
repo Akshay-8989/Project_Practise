@@ -44,25 +44,20 @@ STAGE 3: FEATURE ENGINEERING LAYER
   Output : EngineeredFeatureSet → Kafka topic: engineered_features
 
 
-  STAGE 3: FEATURE ENGINEERING LAYER
-────────────────────────────────────────────────────────────
-  Input  : PreprocessedDocument from topic: preprocessed_documents
-  Output : EngineeredFeatureSet → Kafka topic: engineered_features
-
-
-  ❌ Feature Engineering error: cannot import name 'StatisticalFeatures' from 'schema' (D:\enterprise_platform\preprocessing\schema.py)
+  ❌ Feature Engineering error: 'AppConfig' object has no attribute 'artifact_base'
 Traceback (most recent call last):
-  File "D:\enterprise_platform\scripts\test_end_to_end.py", line 212, in run_feature_engineering
-    importlib.reload(fe_pipeline)
-  File "C:\Users\akshay.choudhari\AppData\Local\Programs\Python\Python311\Lib\importlib\__init__.py", line 169, in reload
-    _bootstrap._exec(spec, module)
-  File "<frozen importlib._bootstrap>", line 621, in _exec
-  File "<frozen importlib._bootstrap_external>", line 940, in exec_module
-  File "<frozen importlib._bootstrap>", line 241, in _call_with_frames_removed
-  File "D:\enterprise_platform\feature_engineering\pipeline.py", line 49, in <module>
-    from feature_engineering.stats_features import extract_stat_features
-  File "D:\enterprise_platform\feature_engineering\stats_features.py", line 29, in <module>
-    from schema import StatisticalFeatures, TextStats
-ImportError: cannot import name 'StatisticalFeatures' from 'schema' (D:\enterprise_platform\preprocessing\schema.py)
+  File "D:\enterprise_platform\scripts\test_end_to_end.py", line 215, in run_feature_engineering
+    result = fe_pipeline.run_pipeline(preprocessed_payload)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\enterprise_platform\feature_engineering\pipeline.py", line 115, in run_pipeline
+    registry        = get_registry()
+                      ^^^^^^^^^^^^^^
+  File "D:\enterprise_platform\feature_engineering\feature_registry.py", line 236, in get_registry
+    _registry = FeatureRegistry()
+                ^^^^^^^^^^^^^^^^^
+  File "D:\enterprise_platform\feature_engineering\feature_registry.py", line 78, in __init__
+    self._registry_path  = os.path.join(CONFIG.artifact_base, "feature_registry.json")
+                                        ^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'AppConfig' object has no attribute 'artifact_base'
 
 [PIPELINE STOPPED] Feature engineering failed.
