@@ -44,7 +44,13 @@ STAGE 3: FEATURE ENGINEERING LAYER
   Output : EngineeredFeatureSet → Kafka topic: engineered_features
 
 
-  ❌ Feature Engineering error: No module named 'feature_engineering'
+  STAGE 3: FEATURE ENGINEERING LAYER
+────────────────────────────────────────────────────────────
+  Input  : PreprocessedDocument from topic: preprocessed_documents
+  Output : EngineeredFeatureSet → Kafka topic: engineered_features
+
+
+  ❌ Feature Engineering error: cannot import name 'StatisticalFeatures' from 'schema' (D:\enterprise_platform\preprocessing\schema.py)
 Traceback (most recent call last):
   File "D:\enterprise_platform\scripts\test_end_to_end.py", line 212, in run_feature_engineering
     importlib.reload(fe_pipeline)
@@ -53,8 +59,10 @@ Traceback (most recent call last):
   File "<frozen importlib._bootstrap>", line 621, in _exec
   File "<frozen importlib._bootstrap_external>", line 940, in exec_module
   File "<frozen importlib._bootstrap>", line 241, in _call_with_frames_removed
-  File "D:\enterprise_platform\feature_engineering\pipeline.py", line 40, in <module>
-    from feature_engineering.schema import (
-ModuleNotFoundError: No module named 'feature_engineering'
+  File "D:\enterprise_platform\feature_engineering\pipeline.py", line 49, in <module>
+    from feature_engineering.stats_features import extract_stat_features
+  File "D:\enterprise_platform\feature_engineering\stats_features.py", line 29, in <module>
+    from schema import StatisticalFeatures, TextStats
+ImportError: cannot import name 'StatisticalFeatures' from 'schema' (D:\enterprise_platform\preprocessing\schema.py)
 
 [PIPELINE STOPPED] Feature engineering failed.
