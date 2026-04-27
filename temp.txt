@@ -37,3 +37,24 @@ from feature_engineering.tfidf_engine import transform_document, get_engine as g
 from feature_engineering.embedding_engine import encode_text, get_engine as get_emb_engine
 from feature_engineering.chunk_aggregator import aggregate_chunk_embeddings
 from feature_engineering.feature_registry import get_registry, FeatureRegistry
+
+STAGE 3: FEATURE ENGINEERING LAYER
+────────────────────────────────────────────────────────────
+  Input  : PreprocessedDocument from topic: preprocessed_documents
+  Output : EngineeredFeatureSet → Kafka topic: engineered_features
+
+
+  ❌ Feature Engineering error: No module named 'feature_engineering'
+Traceback (most recent call last):
+  File "D:\enterprise_platform\scripts\test_end_to_end.py", line 212, in run_feature_engineering
+    importlib.reload(fe_pipeline)
+  File "C:\Users\akshay.choudhari\AppData\Local\Programs\Python\Python311\Lib\importlib\__init__.py", line 169, in reload
+    _bootstrap._exec(spec, module)
+  File "<frozen importlib._bootstrap>", line 621, in _exec
+  File "<frozen importlib._bootstrap_external>", line 940, in exec_module
+  File "<frozen importlib._bootstrap>", line 241, in _call_with_frames_removed
+  File "D:\enterprise_platform\feature_engineering\pipeline.py", line 40, in <module>
+    from feature_engineering.schema import (
+ModuleNotFoundError: No module named 'feature_engineering'
+
+[PIPELINE STOPPED] Feature engineering failed.
