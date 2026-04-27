@@ -7,3 +7,23 @@ v3 changes:
   - FAISS vector database with TF-IDF + SVD embeddings
 """
 
+STAGE 3: FEATURE ENGINEERING LAYER
+────────────────────────────────────────────────────────────
+  Input  : PreprocessedDocument from topic: preprocessed_documents
+  Output : EngineeredFeatureSet → Kafka topic: engineered_features
+
+
+  ❌ Feature Engineering error: cannot import name 'ClassicalFeatures' from 'schema' (D:\enterprise_platform\preprocessing\schema.py)
+Traceback (most recent call last):
+  File "D:\enterprise_platform\scripts\test_end_to_end.py", line 212, in run_feature_engineering
+    importlib.reload(fe_pipeline)
+  File "C:\Users\akshay.choudhari\AppData\Local\Programs\Python\Python311\Lib\importlib\__init__.py", line 169, in reload
+    _bootstrap._exec(spec, module)
+  File "<frozen importlib._bootstrap>", line 621, in _exec
+  File "<frozen importlib._bootstrap_external>", line 940, in exec_module
+  File "<frozen importlib._bootstrap>", line 241, in _call_with_frames_removed
+  File "D:\enterprise_platform\feature_engineering\pipeline.py", line 40, in <module>
+    from schema import (
+ImportError: cannot import name 'ClassicalFeatures' from 'schema' (D:\enterprise_platform\preprocessing\schema.py)
+
+[PIPELINE STOPPED] Feature engineering failed.
