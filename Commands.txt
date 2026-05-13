@@ -1,351 +1,284 @@
-cd D:\compliance_copilot
-python -c "
-import sys
-sys.path.insert(0, '.')
-from src.vector_store import ComplianceVectorStore
-from pathlib import Path
+I'll analyze the codebase systematically. Let me start by extracting the ZIP and exploring the structure.Viewed 4 files, ran a commandViewed 4 files, ran a commandNow let me look at the orchestrator (pipeline.py) and API layer to understand how these layers are wired together.Viewed 2 filesViewed 2 filesNow let me look at the API layer (which exposes ingestion via REST) and the app layer (Streamlit UI which is the main upload entry point).Viewed 3 files, ran a commandViewed 3 files, ran a commandNow let me examine the Streamlit app, which is the user-facing upload interface. I want to find the upload-handling code and the folder ingestion path.Ran a command, viewed a fileRan a command, viewed a fileNow let me check the language detector, presidio masker, and pii masker utilities since they're called by the preprocessing layer.Viewed 3 filesViewed 3 filesNow I want to check models/logistic_model.py briefly to understand what TF-IDF vectorizer the feature engineering layer reaches into, and the model.yaml config.Viewed 3 filesViewed 3 filesLet me also check the run.py launcher and the io_helpers to round out the picture.Ran 3 commands, viewed a fileRan 3 commands, viewed a fileConfirmed wiring map. Now I have full clarity. Let me verify one critical thing: the api.py says clf.predict(pre.raw_text, ...) — so the classifier sees the raw text, not the cleaned text. The pipeline itself does NOT call preprocessing.preprocess — only the API wrapper does. Let me check whether the pipeline does its own internal preprocessing or relies entirely on the API layer.Check if pipeline.py does its own preprocessingCheck if pipeline.py does its own preprocessingConfirmed — pipeline.py does not call preprocessing.preprocess() itself. It receives whatever text it's given. The preprocessing is owned by the API wrapper _classify(). The pipeline only does language detection and routing inside predict_batch. This is an important architectural fact.
+Let me also confirm one more thing — folder/batch ingestion. The user mentioned "batch/folder ingestion":Viewed 2 files, ran a commandViewed 2 files, ran a commandI now have a complete and grounded picture of all three layers. Let me write the architectural review.
 
-store = ComplianceVectorStore(Path('data/vectorstore'))
-print('Chunks in store:', store.document_count())
-results = store.similarity_search('What documents are required for KYC?', k=3)
-print('Search results:', len(results))
-for doc, score in results:
-    print(f'  Score: {score:.3f} | Page: {doc.metadata[\"page\"]} | {doc.page_content[:100]}')
-"
+DataShield — Architectural Review: Layers 1–3
+This is a senior-engineer review traced against the actual code, not the docs. I'll walk through ingestion → preprocessing → feature engineering, then critique what works and what doesn't.
 
+0. Big Picture: How the Three Layers Are Wired
+The three layers are not chained together inside the pipeline. They're glued together by the API layer (api.py::_classify). That's the single most important architectural fact in this codebase, and it shapes everything below.
+                  ┌──────── app.py (Streamlit UI) ────────┐
+                  │  st.file_uploader → POST /classify/* │
+                  └────────────────┬──────────────────────┘
+                                   ▼
+                         api.py  (FastAPI)
+                                   │
+        ┌──────────────────────────┼───────────────────────────┐
+        ▼                          ▼                           ▼
+  /classify/file            /classify/batch              /classify
+   (single)                  (async N files)              (raw text)
+        │                          │                           │
+        ▼                          ▼                           │
+  extract_text_from_bytes()  (per-file, in a loop)             │
+   = LAYER 1                                                   │
+        │                          │                           │
+        └────────────┬─────────────┘                           │
+                     ▼                                         │
+                _classify(text, metadata, doc_id) ◄────────────┘
+                     │
+                     ├── preprocessing.preprocess()    ← LAYER 2
+                     │
+                     ├── feature_engineering.featurize() ← LAYER 3 (inspection only!)
+                     │
+                     └── pipeline.SensitivityClassifier.predict(raw_text)
+                          (re-detects language, runs models on RAW text)
+Layer 3 in this codebase is inspection-only. The classifier doesn't consume the FeatureSummary — it owns its own featurization inside LogisticModel and XGBoostModel. We'll come back to this; it's both a strength (separation of concerns) and a weakness (Layer 3 is decorative for inference).
 
+1. Layer 1 — Ingestion (ingestion.py)
+What it actually does
+A single-file module with two public functions:
 
-cd D:\compliance_copilot
-python -c "
-import sys
-sys.path.insert(0, '.')
-from src.config import PHI2_MODEL_NAME
-print('Phi-2 path set to:', PHI2_MODEL_NAME)
+extract_text_from_file(file_path, filename) — path-based, used by no production caller (legacy/unused).
+extract_text_from_bytes(file_bytes, filename) — bytes-based, the only one actually called in production (by api.py lines 255 and 343).
 
-from src.llm_engine import get_llm
-try:
-    llm = get_llm(model_name=PHI2_MODEL_NAME)
-    print('Phi-2 loaded OK')
-    result = llm.generate('What is KYC? Answer in one sentence.')
-    print('Output:', result)
-except Exception as e:
-    print('ERROR:', e)
-"
+Both return (text, metadata) where metadata is just {source_file, file_type, size_bytes, char_count, word_count}.
+Supported formats
+SUPPORTED_FORMATS = ['.pdf', '.docx', '.doc', '.txt', '.md', '.csv', '.json', '.jsonl', '.html', '.htm', '.rtf', '.log']
+Dispatch is a flat if/elif chain on file extension. Each format has a private extractor:
+FormatLibraryFallbackPDFpdfplumberpypdfDOCXpython-docx—HTMLBeautifulSoupregex stripCSVstdlib csv.DictReader—JSON/JSONLstdlib json + line-by-line fallback—TXT/MD/LOG/RTFplain UTF-8 read—
+Failure is non-fatal: exceptions are caught, text = "[Extraction failed: ...]" is returned, and metadata['extraction_error'] is set. The pipeline keeps moving.
+Execution flow for an upload
+A user drops payroll.pdf into the Streamlit uploader at app.py:366:
 
-"""
-app.py  –  GenAI Banking Policy & Compliance Copilot
-Run with:  streamlit run app.py
-"""
-from __future__ import annotations
-import logging, sys, time, traceback
-from pathlib import Path
+app.py:399 — f.read() reads the bytes; they're posted to POST /classify/file as multipart.
+api.py:254 — data = await file.read() re-buffers bytes from Starlette's UploadFile.
+api.py:255 — extract_text_from_bytes(data, file.filename) is called.
+Inside extract_text_from_bytes, the extension .pdf routes to _extract_pdf_bytes, which wraps the bytes in io.BytesIO and tries pdfplumber first.
+Returns (text, {source_file: 'payroll.pdf', file_type: 'pdf', size_bytes: ..., char_count: ..., word_count: ...}).
+Optional metadata enrichment from form fields (source_system, department) at lines 259–262.
 
-import streamlit as st
+Async batch path (POST /classify/batch)
+This is not true async — it's a FastAPI BackgroundTasks worker:
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
+Client uploads N files.
+Loop at api.py:341–348: every file is read into memory and extracted synchronously, then accumulated into an items list.
+A job_id is generated, persisted to logs/async_jobs.json, and background_tasks.add_task(_run_batch_job, ...) queues it.
+_run_batch_job runs sequentially in the same event loop, classifying each item one at a time and writing progress to disk after every doc.
+Client polls GET /classify/status/{job_id}.
 
-from src.config import (
-    APP_TITLE, CHUNK_OVERLAP, CHUNK_SIZE,
-    MAX_NEW_TOKENS, PHI2_MODEL_NAME, TEMPERATURE, TOP_K_RESULTS,
-    UPLOAD_DIR,
-)
+Folder ingestion path (separate from the API)
+utils/io_helpers.py::read_documents() is used by scripts/predict_cli.py for CLI folder ingestion. It walks a directory with p.rglob('*'), yields (text, metadata) tuples, but is restricted to .txt / .log / .md / .csv / .json / .jsonl and explicitly refuses PDF/DOCX with UNSUPPORTED_EXT_MSG. This is a separate, weaker ingestion code path that exists in parallel to ingestion.py — see weaknesses below.
+Strengths
 
-logging.basicConfig(level=logging.INFO)
+Single dispatch surface: one extension → one extractor. Easy to add a new format (one helper + one branch).
+Resilient: extraction errors don't kill the request; they're tagged in metadata.
+Two-path API (path/bytes) covers both Streamlit uploads and disk reads cleanly.
+Library fallbacks (pdfplumber → pypdf, BeautifulSoup → regex) keep it deployable on slim images.
 
-st.set_page_config(page_title=APP_TITLE, page_icon="🏦",
-                   layout="wide", initial_sidebar_state="expanded")
+Weaknesses
 
-st.markdown("""
-<style>
-.main-header {
-    background: linear-gradient(135deg, #1a2744 0%, #0d3b6e 50%, #1565c0 100%);
-    padding: 1.5rem 2rem; border-radius: 12px; margin-bottom: 1rem; color: white;
-}
-.main-header h1 { margin: 0; font-size: 1.8rem; }
-.main-header p  { margin: 0.3rem 0 0; opacity: 0.8; font-size: 0.9rem; }
-.badge-green  { color: #2e7d32; font-weight: 600; }
-.badge-orange { color: #e65100; font-weight: 600; }
-#MainMenu { visibility: hidden; }
-footer    { visibility: hidden; }
-</style>
-""", unsafe_allow_html=True)
+No Apache Tika, no Kafka, no S3 — yet the architecture diagram (image 2) lists exactly those. The module's own docstring admits this: "No Kafka, no S3 — local file ingestion for laptop deployment." This is the largest gap vs the PS.
+Two parallel ingestion code paths (ingestion.py and utils/io_helpers.py) with different supported-format sets. io_helpers.py refuses PDF/DOCX; ingestion.py handles them. CLI users and API users get inconsistent capabilities. This is technical debt waiting to be a bug.
+Whole-file in-memory: await file.read() slurps the entire upload before any processing. A 200 MB PDF starves the worker.
+No streaming, no chunked upload, no virus scan, no MIME validation — only extension-based dispatch. A user renaming malware.exe to report.pdf gets it parsed.
+extract_text_from_file is dead code in production but maintained alongside extract_text_from_bytes with duplicated logic (the PDF/DOCX/HTML/CSV/JSON helpers all exist twice).
+Async batch is not concurrent. BackgroundTasks runs in the same process, sequentially. For 100 files you get N × per-doc-latency, not parallelism.
 
-# ── Session state ─────────────────────────────────────────────────────────────
-for k, v in {"messages": [], "indexed_files": []}.items():
-    if k not in st.session_state:
-        st.session_state[k] = v
+PS alignment
+PS requirementRealityKafka / S3 / REST connectorsOnly REST. Kafka and S3 are absent.Apache TikaNot used — bespoke pdfplumber/python-docx wrappers.pdfplumber, python-docx✅ Used.Batch and real-time streamsReal-time only via REST; "batch" is just multi-file POST. No streaming.
 
-# ── Pipeline ──────────────────────────────────────────────────────────────────
-@st.cache_resource(show_spinner=False)
-def get_pipeline():
-    from src.rag_pipeline import ComplianceRAGPipeline
-    return ComplianceRAGPipeline(
-        top_k=TOP_K_RESULTS, model_name=PHI2_MODEL_NAME,
-        max_new_tokens=MAX_NEW_TOKENS, temperature=TEMPERATURE,
-    )
+2. Layer 2 — Pre-processing (preprocessing.py)
+What it actually does
+This is the cleanest, most well-designed layer in the project. It exposes one function:
+pythonpreprocess(text, metadata) -> PreprocessedDoc
+PreprocessedDoc is a dataclass holding three parallel views of the text:
 
-# ── Sidebar ───────────────────────────────────────────────────────────────────
-with st.sidebar:
-    st.markdown("## 🏦 Compliance Copilot")
-    st.markdown("---")
-    st.markdown("### 📄 Upload Policy Documents")
+raw_text — original, untouched. What the policy engine and classifier see.
+clean_text — normalized. What feature engineering and TF-IDF see.
+masked_text — PII replaced with <EMAIL>, <US_SSN>, etc. What the audit log sees.
 
-    uploaded_files = st.file_uploader(
-        "Upload PDF documents", type=["pdf"], accept_multiple_files=True,
-    )
+This separation is the architectural insight of the layer: the same document has different audiences with different trust levels, and they each get the appropriate view.
+Execution flow inside preprocess()
+For an input text like "Employee SSN 123-45-6789, salary $142,000, HR review.":
 
-    if uploaded_files:
-        pipeline = get_pipeline()
-        for uf in uploaded_files:
-            if uf.name not in st.session_state["indexed_files"]:
-                dest = UPLOAD_DIR / uf.name
-                with open(dest, "wb") as f:
-                    f.write(uf.getbuffer())
-                with st.spinner(f"Indexing {uf.name}…"):
-                    try:
-                        from src.document_processor import load_and_chunk_pdf
-                        chunks = load_and_chunk_pdf(dest, CHUNK_SIZE, CHUNK_OVERLAP)
-                        pipeline.vectorstore.add_documents(chunks)
-                        st.session_state["indexed_files"].append(uf.name)
-                        st.success(f"✅ {uf.name} — {len(chunks)} chunks")
-                    except Exception as exc:
-                        st.error(f"❌ {uf.name}: {exc}")
+clean_text() (line 108) runs four sub-steps in order:
 
-    st.markdown("---")
-    st.markdown("### 📊 Index Status")
-    try:
-        pipeline  = get_pipeline()
-        doc_count = pipeline.vectorstore.document_count()
-        if doc_count > 0:
-            st.markdown(f'<span class="badge-green">● {doc_count} chunks indexed</span>',
-                        unsafe_allow_html=True)
-            for fname in st.session_state["indexed_files"]:
-                st.markdown(f"  • {fname}")
-        else:
-            st.markdown('<span class="badge-orange">● No documents yet</span>',
-                        unsafe_allow_html=True)
-    except Exception as exc:
-        st.error(str(exc))
-
-    st.markdown("---")
-    with st.expander("⚙️ Settings"):
-        st.markdown(f"**Phi-2:** `{PHI2_MODEL_NAME}`")
-        st.markdown(f"**Embedding:** TF-IDF (offline)")
-        st.markdown(f"**Chunk size:** {CHUNK_SIZE} | **Top-K:** {TOP_K_RESULTS}")
-        st.markdown(f"**Max tokens:** {MAX_NEW_TOKENS}")
-
-    if st.button("🗑️ Clear Chat"):
-        st.session_state["messages"] = []
-        st.rerun()
-
-# ── Main panel ────────────────────────────────────────────────────────────────
-st.markdown(f"""
-<div class="main-header">
-    <h1>🏦 {APP_TITLE}</h1>
-    <p>Ask questions about KYC, AML, loan policies, and risk management guidelines</p>
-</div>
-""", unsafe_allow_html=True)
-
-# ── Render existing chat messages ─────────────────────────────────────────────
-for msg in st.session_state["messages"]:
-    with st.chat_message(msg["role"]):
-        st.write(msg["content"])
-        if msg.get("error"):
-            st.warning(f"LLM Error: {msg['error']}")
-        if msg.get("sources"):
-            with st.expander(f"📚 Sources ({len(msg['sources'])} cited)"):
-                for s in msg["sources"]:
-                    st.markdown(f"**{s['document_name']}** — Page {s['page_number']} | {s['relevance_score']:.0%} match")
-                    st.caption(f"…{s['excerpt']}…")
-
-# ── Empty state ───────────────────────────────────────────────────────────────
-if not st.session_state["messages"]:
-    st.info("👆 Upload a policy PDF in the sidebar, then type your question below and press Enter.")
-
-# ── Chat input ────────────────────────────────────────────────────────────────
-question = st.chat_input("Ask a compliance question… e.g. What is the AML reporting threshold?")
-
-if question and question.strip():
-    question = question.strip()
-
-    # Show user message immediately
-    st.session_state["messages"].append({"role": "user", "content": question})
-    with st.chat_message("user"):
-        st.write(question)
-
-    # Generate answer
-    with st.chat_message("assistant"):
-        with st.spinner("Searching policy documents…"):
-            try:
-                t0       = time.time()
-                pipeline = get_pipeline()
-                response = pipeline.query(question)
-                elapsed  = time.time() - t0
-
-                answer = response.answer.strip() if response.answer else ""
-                if not answer:
-                    answer = "The model returned an empty response. Please rephrase your question."
-                else:
-                    answer += f"\n\n*⏱ {elapsed:.1f}s*"
-
-                st.write(answer)
-
-                sources_data = []
-                if response.sources:
-                    with st.expander(f"📚 Sources ({len(response.sources)} cited)"):
-                        for s in response.sources:
-                            st.markdown(f"**{s.document_name}** — Page {s.page_number} | {s.relevance_score:.0%} match")
-                            st.caption(f"…{s.excerpt}…")
-                            sources_data.append({
-                                "document_name":   s.document_name,
-                                "page_number":     s.page_number,
-                                "excerpt":         s.excerpt,
-                                "relevance_score": s.relevance_score,
-                            })
-
-                if response.error:
-                    st.warning(f"LLM Error: {response.error}")
-
-                st.session_state["messages"].append({
-                    "role":    "assistant",
-                    "content": answer,
-                    "error":   response.error,
-                    "sources": sources_data,
-                })
-
-            except Exception as exc:
-                err_msg = f"Error: {type(exc).__name__}: {exc}\n\n{traceback.format_exc()}"
-                st.error(err_msg)
-                st.session_state["messages"].append({
-                    "role":    "assistant",
-                    "content": f"⚠️ {type(exc).__name__}: {exc}",
-                    "error":   err_msg,
-                    "sources": [],
-                })
-
-❌ KYC_AML_Banking_Policy.pdf: numpy.core.multiarray failed to import
-
-Traceback (most recent call last): File "D:\Project\compliance_copilot\app.py", line 96, in <module> pipeline.vectorstore.add_documents(chunks) File "D:\Project\compliance_copilot\src\vector_store.py", line 188, in add_documents import faiss File "C:\Users\akshay.choudhari\AppData\Local\Programs\Python\Python311\Lib\site-packages\faiss_init_.py", line 29, in <module> from .loader import * File "C:\Users\akshay.choudhari\AppData\Local\Programs\Python\Python311\Lib\site-packages\faiss\loader.py", line 98, in <module> from .swigfaiss import * File "C:\Users\akshay.choudhari\AppData\Local\Programs\Python\Python311\Lib\site-packages\faiss\swigfaiss.py", line 10, in <module> from . import _swigfaiss ImportError: numpy.core.multiarray failed to import
-
-from ragas import evaluate
-from ragas.metrics import faithfulness, answer_relevancy, context_precision, context_recall
-from datasets import Dataset
-import sys
-sys.path.insert(0, '.')
-
-from src.rag_pipeline import ComplianceRAGPipeline
-
-pipeline = ComplianceRAGPipeline()
-
-# Your test questions + ground truth answers from the policy doc
-test_cases = [
-    {
-        "question": "What documents are required for KYC?",
-        "ground_truth": "Passport, National ID, Driving licence, proof of address, source of income"
-    },
-    {
-        "question": "What is the AML reporting threshold for cash deposits?",
-        "ground_truth": "Above USD 10,000 requires filing a Currency Transaction Report"
-    },
-    {
-        "question": "What is the SAR filing deadline?",
-        "ground_truth": "Within 7 business days of initial suspicion"
-    },
-    {
-        "question": "How long must KYC records be retained?",
-        "ground_truth": "5 years after the relationship ends"
-    },
-]
-
-questions, answers, contexts, ground_truths = [], [], [], []
-
-for tc in test_cases:
-    response = pipeline.query(tc["question"])
-    questions.append(tc["question"])
-    answers.append(response.answer)
-    contexts.append([s.excerpt for s in response.sources])
-    ground_truths.append(tc["ground_truth"])
-
-dataset = Dataset.from_dict({
-    "question":     questions,
-    "answer":       answers,
-    "contexts":     contexts,
-    "ground_truth": ground_truths,
-})
-
-result = evaluate(dataset, metrics=[
-    faithfulness, answer_relevancy,
-    context_precision, context_recall
-])
-
-print(result)
+_unicode_normalize — NFKC normalization (handles width, ligatures; preserves Devanagari for Hindi).
+_strip_control_chars — kills \x00–\x1f except newline/tab.
+_strip_boilerplate — five regexes that nuke email quote lines (> ...), separators (----), "Sent from my iPhone", confidentiality footers, unsubscribe lines.
+_collapse_whitespace — multi-space → single, multi-newline → double.
 
 
-# evaluate_offline.py
-import sys
-sys.path.insert(0, '.')
-from src.rag_pipeline import ComplianceRAGPipeline
-from rouge_score import rouge_scorer
-from bert_score import score as bert_score
+detect_language(cleaned) (from utils/language_detector.py) — pure Unicode-script counting. If ≥15% Devanagari → 'hi'; if ≥85% Latin → 'en'; else 'unknown'. O(n), deterministic, no model dependency.
+masker.mask(cleaned) — calls the singleton from utils/presidio_masker.py:
 
-pipeline = ComplianceRAGPipeline()
+Primary: Microsoft Presidio (AnalyzerEngine + AnonymizerEngine), constrained to a fixed entity list (US_SSN, CREDIT_CARD, IBAN_CODE, IN_PAN, IN_AADHAAR, EMAIL_ADDRESS, PHONE_NUMBER, etc.), threshold 0.4.
+Fallback: if Presidio or its spaCy model isn't installed, transparently falls back to utils/pii_masker.py — eight regex patterns. The singleton caches Presidio's heavy init.
 
-test_cases = [
-    {
-        "question":     "What documents are required for KYC?",
-        "ground_truth": "Passport, National ID card, Driving licence, Voter ID card, proof of address issued within last 3 months, source of income documents"
-    },
-    {
-        "question":     "What is the AML reporting threshold for cash deposits?",
-        "ground_truth": "Above USD 10,000 requires filing a Currency Transaction Report CTR"
-    },
-    {
-        "question":     "What is the SAR filing deadline?",
-        "ground_truth": "Within 7 business days of initial suspicion to FIU or FinCEN"
-    },
-    {
-        "question":     "How long must KYC records be retained?",
-        "ground_truth": "5 years after the relationship ends"
-    },
-    {
-        "question":     "What are the penalties for non-compliance?",
-        "ground_truth": "Fines up to USD 1,000,000 per violation, suspension of banking licence, criminal prosecution up to 20 years imprisonment, personal fines up to USD 500,000"
-    },
-]
 
-scorer    = rouge_scorer.RougeScorer(['rouge1', 'rouge2', 'rougeL'], use_stemmer=True)
-questions, predictions, references = [], [], []
+tokenize(cleaned) — regex \w+(?:'\w+)?. Cheap, deterministic, Unicode-aware (works for both EN and HI).
+chunk_text(cleaned, max_tokens=480) — paragraph-aware greedy packing into ≤480-token chunks. Sized for BERT's 512-wordpiece cap.
+infer_metadata(cleaned, metadata) — keyword scan of the first 2000 chars for source/department hints (e.g., 'salary' → 'HR', 'invoice' → 'Finance'). Fills UNKNOWN defaults. Attaches detected_language.
+Returns the PreprocessedDoc. It also exposes a for_audit() method that strips raw_text/clean_text and gives only a masked preview + counts — used at api.py:202 so audit logs never see raw content.
 
-print("=" * 70)
-print(f"{'Question':<45} {'ROUGE-1':>8} {'ROUGE-L':>8}")
-print("=" * 70)
+How data moves out
+After preprocess() returns at api.py:178:
 
-r1_scores, rL_scores = [], []
+pre.clean_text → feature_engineering.featurize(pre.clean_text, lang=pre.detected_language) at line 182.
+pre.raw_text → clf.predict(pre.raw_text, pre.metadata, doc_id=doc_id) at line 188. The classifier deliberately gets raw text because the downstream PolicyEngine needs the live PII patterns to fire its "if Restricted token detected → override to Restricted" rule (system architecture image 3).
+pre.for_audit() → embedded in the final response.
 
-for tc in test_cases:
-    response   = pipeline.query(tc["question"])
-    answer     = response.answer.strip()
-    ref        = tc["ground_truth"]
-    scores     = scorer.score(ref, answer)
-    r1         = scores['rouge1'].fmeasure
-    rL         = scores['rougeL'].fmeasure
-    r1_scores.append(r1)
-    rL_scores.append(rL)
-    predictions.append(answer)
-    references.append(ref)
-    print(f"{tc['question'][:44]:<45} {r1:>7.1%} {rL:>7.1%}")
+Schemas / contracts
+The contract is the @dataclass PreprocessedDoc. It carries 11 fields + a to_dict() and a safe-for-audit for_audit() projection. Type hints are honest; Dict[str, Any] is only used for the loose metadata dict.
+Strengths
 
-print("=" * 70)
-print(f"{'AVERAGE':<45} {sum(r1_scores)/len(r1_scores):>7.1%} {sum(rL_scores)/len(rL_scores):>7.1%}")
+Three-view design (raw / clean / masked) is the right model. Each downstream consumer gets the view it should have.
+Idempotent clean_text — safe to call twice.
+Presidio + regex defense-in-depth — exactly what the architecture image (3) calls for. Singleton avoids reloading spaCy.
+Boilerplate patterns are conservative — they target high-confidence noise (signature lines, footers), not document content.
+Hindi handled correctly — NFKC normalization preserves Devanagari, tokenizer regex is Unicode-aware, language detector is script-based.
+for_audit() projection enforces Constraint C1 ("No raw PII stored post-classification") at the API boundary.
 
-# BERTScore
-print("\nCalculating BERTScore (semantic similarity)...")
-P, R, F1 = bert_score(predictions, references, lang="en", verbose=False)
-print(f"BERTScore F1 (avg): {F1.mean().item():.1%}")
-print("=" * 70)
+Weaknesses
 
-print("\nMetric Guide:")
-print("ROUGE-1  = word overlap between answer and ground truth")
-print("ROUGE-L  = longest common subsequence overlap")
-print("BERTScore = semantic similarity (meaning, not just words)")
-print("Target: ROUGE-1 > 30%, BERTScore F1 > 60%")
+The classifier doesn't actually use clean_text. _classify passes pre.raw_text to the pipeline (line 188). The cleaning helps feature engineering and audit, but the live prediction is on the unclean text. This is a deliberate choice (policy engine needs PII patterns) but it means cleaning gives a smaller lift than it appears.
+Metadata inference is naive. _DEPT_HINTS = {'salary': 'HR', 'invoice': 'Finance'} is keyword-matching on the first 2000 chars. A finance email about an HR salary survey will be misclassified.
+No PII span tracking. masker.mask() returns the masked text and entity types — but doesn't return spans/offsets. If a downstream consumer needed to know where PII was found in the original document, the information is gone.
+Chunking is built but never consumed downstream. pre.chunks is computed eagerly but the only consumer is the API preview endpoint. The transformer model (which is what the 512-token limit was for) operates on whole texts elsewhere.
+Boilerplate patterns are English-only. The Hindi route gets no equivalent stripping.
+detect_language is called twice: once in preprocessing.preprocess, once inside pipeline.predict_batch._route. Cheap, but redundant — the pipeline could trust the metadata.
+
+PS alignment
+PS requirementRealityText cleaning✅PII masking (Presidio)✅ with regex fallbackTokenization✅ (lightweight)Metadata extraction⚠️ Keyword-hint based onlyLanguage detection → route to language-specific model✅ EN + HI, but only those two
+
+3. Layer 3 — Feature Engineering (feature_engineering.py)
+Critical thing to understand first
+This layer does not produce features that the classifier consumes. Read the module docstring carefully:
+
+"The classifier module already does featurization internally — this layer wraps that with introspection: you can ask 'what features did doc X produce?' without running the full classifier."
+
+The actual featurization for inference lives inside the models themselves:
+
+LogisticModel (models/logistic_model.py) holds a sklearn.Pipeline([TfidfVectorizer, LogisticRegression]) — the vectorizer is part of the joblib artifact.
+XGBoostModel (models/xgboost_model.py) holds a HashingVectorizer(n_features=512, ngram_range=(1,2)) + one-hot encoders for source_system / department / file_type + 4 numeric stats — all assembled in its private _featurize().
+The transformer carries its own tokenizer.
+
+feature_engineering.featurize() is a read-only mirror of those features, built for the UI's "Feature Preview" panel and the POST /features/preview API endpoint.
+What featurize() actually returns
+A FeatureSummary dataclass containing:
+
+tfidf_top: List[(token, weight)] — top-k TF-IDF tokens for this doc, computed by reaching into the trained LogisticModel and calling its persisted TfidfVectorizer.transform([text]), then argsort-top-k.
+unigram_count, bigram_count — whitespace-split counts.
+numeric_features — {num_chars, num_tokens, num_digits, digit_ratio}. Mirrors what XGBoost uses, but recomputed (not shared).
+embedding_dim, embedding_norm — populated only if a transformer artifact exists. Calls TransformerModel.encode([text]) if model.encode exists. Otherwise None.
+vocab_size, used_language — bookkeeping.
+
+Execution flow
+For each request hitting _classify:
+
+api.py:182 — feat = feature_engineering.featurize(pre.clean_text, lang=pre.detected_language, top_k=8).
+Inside featurize():
+
+tfidf_top_tokens(text, lang, top_k) calls _logistic_model_for_lang(lang), which lazy-loads the LogisticModel joblib from artifacts/en/logistic.joblib or artifacts/hi/logistic.joblib on first call. The result is cached in a function-attached dict (_logistic_model_for_lang._cache) — so the second request reuses it.
+It reaches into model.pipeline.named_steps['tfidf'], calls vec.transform([text]), sorts the resulting sparse row, and returns the top-k indices.
+_ngram_counts and _numeric_features are pure functions on the text.
+embed_optional is tried (returns None unless a fine-tuned transformer artifact is present).
+
+
+The summary becomes part of the API response (final['features'] = feat.to_dict() at line 203).
+
+Strengths
+
+Genuine introspection. The TF-IDF top-k is computed from the actual trained vectorizer, not a separate one. This is honest — what the UI shows is what the model literally sees.
+Lazy + cached model loading. Module-attribute cache via _logistic_model_for_lang._cache keeps it cheap.
+Graceful absence of transformer. embed_optional returns None if torch isn't installed or no artifact exists. No exceptions bubble up.
+Separately addressable. Exposing POST /features/preview as a standalone endpoint lets compliance auditors inspect what the model would "see" without consuming a classification slot — and that's exactly what the architecture image-3 row "Feature Engineering" needs.
+
+Weaknesses
+
+It is conceptually a projection of the model, not a layer. A Layer in the PS sense is supposed to produce features for downstream models. This module instead re-derives them for display. The actual feature pipeline lives in LogisticModel.__init__ and XGBoostModel._featurize and is duplicated/inconsistent between them.
+Tight coupling to LogisticModel's internals — model.pipeline.named_steps['tfidf'] is a hard dependency on a specific sklearn pipeline shape. If you ever swap LR for SGDClassifier with a different step name, this breaks silently.
+TF-IDF "top tokens" is a poor proxy for what XGBoost or the transformer key on. The UI shows TF-IDF tops as if they're "the features," but the XGBoost ensemble member uses hashed features (no recoverable vocab) and metadata one-hots — none of which this summary surfaces. The auditor gets a misleading picture.
+Triple-counted tokenization: this module's _ngram_counts uses text.split(); XGBoost's _numeric_features uses text.split(); preprocessing's tokenize uses a regex. Three slightly different definitions of "token" floating around.
+Lang fallback unfair: if you ask for lang='hi' but no Hindi LR artifact exists, tfidf_top silently returns []. No telemetry. The UI just shows an empty list with no explanation.
+embed_optional reloads the transformer on every call if not cached — it doesn't share the cache with the pipeline's already-loaded transformer. Two copies in memory in the worst case.
+
+PS alignment
+PS requirementRealityTF-IDF + n-gram baselines✅ — inside LogisticModel.Contextual embeddings (BERT/RoBERTa/DeBERTa) on domain corpus⚠️ Optional, behind force_mode='fast' flag, defaults to NOT loaded. feature_engineering.embed_optional only surfaces stats.Domain corpus fine-tuning⚠️ Synthetic dataset, fast-finetune mode freezes encoder and trains only the classification head.
+
+4. End-to-End Trace (User Story)
+User uploads salary_review.pdf via the Streamlit UI:
+
+app.py:399 — f.read() → bytes → POST to /classify/file.
+api.py:254–255 — data = await file.read(); text, file_meta = extract_text_from_bytes(data, 'salary_review.pdf').
+ingestion.py:70 — .pdf branch → _extract_pdf_bytes(data) → pdfplumber → returns joined page text. file_meta = {source_file, file_type='pdf', size_bytes, char_count, word_count}.
+api.py:259–262 — Optional form fields (source_system, department) merged into file_meta.
+api.py:264 — _classify(text, file_meta, doc_id).
+api.py:178 — pre = preprocessing.preprocess(text, file_meta):
+
+clean → language='en' → Presidio masks the SSN/PAN/credit-card patterns → tokenize → chunk → infer 'salary' → department='HR' → return PreprocessedDoc.
+
+
+api.py:182 — feat = feature_engineering.featurize(pre.clean_text, lang='en', top_k=8):
+
+Lazy-load artifacts/en/logistic.joblib (first call only).
+TF-IDF transform pre.clean_text against persisted vectorizer → top-8 tokens like [('salary', 0.34), ('employee', 0.22), …].
+Compute n-gram counts + numeric stats.
+embed_optional returns None (fast mode, no transformer artifact).
+
+
+api.py:187–188 — clf = get_pipeline() (lazy, cached). raw_result = clf.predict(pre.raw_text, pre.metadata, doc_id=doc_id). Notice: the raw text, not pre.clean_text — because the policy engine downstream needs the live PII patterns.
+Inside pipeline.py: detect_language(text) runs again, routes to _LanguageModelSet('en'), runs LR + XGBoost (transformer skipped in fast mode), votes/stacks → label 'Confidential', confidence 0.94. PolicyEngine sees raw text, sees no Restricted-tier tokens, leaves label alone. SHAP + fast LIME fallback (because confidence > 0.90 threshold) produce evidence tokens.
+api.py:191–211 — Response assembled: label, confidence, evidence, preprocessing summary (pre.for_audit()), feature summary, latency breakdown, timestamp.
+api.py:215–224 — webhooks.fire_classification(...) posts to any registered DLP/CASB webhooks (best-effort, errors swallowed).
+AuditLogger in pipeline writes a line to logs/audit.jsonl.
+Response returns to Streamlit; render_result() displays it.
+
+For batch: same flow, but in a loop, sequentially, with periodic writes to logs/async_jobs.json.
+
+5. Cross-Cutting Architectural Assessment
+Enterprise-level choices that are correct
+
+Lazy pipeline loading with double-checked locking (api.py:74–85) — import-time is cheap, first request pays the cost. Correct for serverless and dev-loop ergonomics.
+Defense-in-depth masking — Presidio primary + regex fallback + for_audit() projection. C1 (no raw PII persisted) is enforced at every write boundary.
+Language routing as a first-class concept — separate model sets per language, separate artifact directories. Matches the architecture-image-3 row.
+Idempotent, dataclass-based contracts between layers (PreprocessedDoc, FeatureSummary) — easier to test, easier to swap implementations.
+force_mode='fast' at api.py:84 is a deliberate latency-vs-accuracy lever. The pipeline knows about it and reports runtime_mode in audit. This is exactly the kind of operational dial enterprise teams need.
+Audit + override + approval logs as JSONL — append-only, replay-able, easy to migrate to a real store later.
+
+Unnecessary complexity / duplication
+
+Two ingestion paths (ingestion.py for API, utils/io_helpers.py for CLI) with diverging format support. They should be one.
+Two copies of every PDF/DOCX/HTML/CSV/JSON extractor in ingestion.py (path-based and bytes-based) — collapse them via io.BytesIO.
+Three near-duplicate "numeric features" definitions: feature_engineering._numeric_features, xgboost_model._numeric_features, preprocessing.tokenize. Tokens get redefined in three places.
+detect_language called twice per request (preprocessing + pipeline routing). Cheap, but the second call should trust pre.detected_language from the metadata.
+Boilerplate patterns live inline as a module-level constant in preprocessing.py. For an enterprise system they should be in configs/ with the policy/threshold tables — Constraint C2 requires auditability.
+
+Architectural strengths
+
+Single response object containing label + confidence + evidence + policy_action + preprocessing audit + feature summary + per-layer latency + audit metadata. One API call, complete trace. Excellent for compliance reviewers.
+Per-layer latency telemetry in the response (latency_ms.preprocessing, latency_ms.features, latency_ms.classification). Saved my time when reviewing — this is rare and great.
+Tests for each layer (tests/test_end_to_end.py, tests/test_language_detector.py, tests/test_latency_fix.py) — the test suite exists and exercises the integration points.
+
+Architectural weaknesses
+
+The whole "ingestion layer" promised by the architecture (Kafka/S3/Apache Tika) is absent. What ships is a REST upload handler and a per-format dispatcher. For a "scalable, automated mechanism" (PS line 1), this is the biggest gap. A laptop demo masquerading as an ingestion service.
+Layer 3 is a mirror, not a layer. The PS calls Feature Engineering an independent layer; in this code it's an introspection wrapper. The real featurization is buried inside model classes and is not separately swappable. If you wanted to swap from hashing-vectorizer to SentenceTransformer embeddings for XGBoost, you'd have to edit xgboost_model.py, not a feature engineering module.
+No streaming end-to-end. Everything is read-all-into-memory. PS expects "batch and real-time streams." This is real-time-only with a synchronous-loop pretending to be batch.
+No content-type validation, no AV scan, no MIME sniff. Ingestion trusts the filename extension. C5 mentions mTLS — but ingestion-layer file safety isn't addressed at all.
+Metadata layer is undercooked. PS lists source system, file type, author, department, creation date. We get source_system, department (both via keyword-hints), file_type — but author and creation date are never extracted from the document itself, even though PDF and DOCX carry them in their properties.
+
+What should be improved (priority-ordered)
+
+Make Layer 3 a real layer. Move LogisticModel's TfidfVectorizer and XGBoostModel._featurize into a shared feature_engineering.build_features(preprocessed_doc) -> FeatureMatrix and have the models accept the matrix as input. This makes featurization swappable and testable independently. The current "inspection" view becomes a free byproduct.
+Collapse the two ingestion paths. Delete utils/io_helpers.py's ad-hoc reader; route the CLI through ingestion.extract_text_from_file. One source of truth for which formats are supported.
+Extract author/creation-date from PDF/DOCX metadata. pdfplumber.PDF.metadata and python-docx.Document.core_properties.created/author are one-liners. The PS lists them; we currently throw them away.
+Add a real async path. Either Celery + Redis or asyncio.gather over ThreadPoolExecutor. BackgroundTasks sequential loop is fine for demos, not for a payments-vendor production claim.
+Move boilerplate patterns + dept/source hints into configs/ so they're versioned with the policy and pass audit (C2). Currently hard-coded.
+Track PII spans, not just types. Presidio returns offsets — preserve them in PreprocessedDoc so the UI can highlight redactions. Today the offset information is computed by Presidio and immediately thrown away.
+Replace extension-based dispatch with a proper MIME check (python-magic) before the extractor chain. Stops .pdf-renamed-malware at the door.
+Cache the transformer in one place, not separately in pipeline._LanguageModelSet and feature_engineering.embed_optional.
+
+
+6. TL;DR Summary Table
+AspectLayer 1 IngestionLayer 2 PreprocessingLayer 3 Feature Eng.File / moduleingestion.py (+ utils/io_helpers.py parallel path)preprocessing.py (+ utils/presidio_masker.py, utils/pii_masker.py, utils/language_detector.py)feature_engineering.pyEntry functionextract_text_from_bytes()preprocess() → PreprocessedDocfeaturize() → FeatureSummaryCalled fromapi.py /classify/file, /classify/batchapi.py::_classify (every request)api.py::_classify and /features/previewContract(text, metadata) tuplePreprocessedDoc dataclassFeatureSummary dataclassPS-alignmentWeak — no Kafka/S3/TikaStrong — matches arch-3 rowMixed — introspection only, real featurization is buried in modelsBiggest strengthFormat coverage + graceful failure3-view (raw/clean/masked) separation, Presidio + regex defense-in-depthReal persisted-vectorizer introspectionBiggest weaknessTwo parallel ingestion paths, in-memory only, no streamingCleaning helps audit but classifier sees raw text anywayNot consumed by inference — purely cosmetic for the prediction path
+The codebase is a well-engineered laptop prototype with strong Layer 2, decent Layer 1, and an honest-but-misnamed Layer 3. To match the architecture diagram it would need a real ingestion layer (Kafka/S3/Tika) and a Layer 3 that the models actually depend on, instead of one that mirrors what they already compute internally.
