@@ -1,4 +1,333 @@
-I'll analyze the codebase systematically. Let me start by extracting the ZIP and exploring the structure.Viewed 4 files, ran a commandViewed 4 files, ran a commandNow let me look at the orchestrator (pipeline.py) and API layer to understand how these layers are wired together.Viewed 2 filesViewed 2 filesNow let me look at the API layer (which exposes ingestion via REST) and the app layer (Streamlit UI which is the main upload entry point).Viewed 3 files, ran a commandViewed 3 files, ran a commandNow let me examine the Streamlit app, which is the user-facing upload interface. I want to find the upload-handling code and the folder ingestion path.Ran a command, viewed a fileRan a command, viewed a fileNow let me check the language detector, presidio masker, and pii masker utilities since they're called by the preprocessing layer.Viewed 3 filesViewed 3 filesNow I want to check models/logistic_model.py briefly to understand what TF-IDF vectorizer the feature engineering layer reaches into, and the model.yaml config.Viewed 3 filesViewed 3 filesLet me also check the run.py launcher and the io_helpers to round out the picture.Ran 3 commands, viewed a fileRan 3 commands, viewed a fileConfirmed wiring map. Now I have full clarity. Let me verify one critical thing: the api.py says clf.predict(pre.raw_text, ...) — so the classifier sees the raw text, not the cleaned text. The pipeline itself does NOT call preprocessing.preprocess — only the API wrapper does. Let me check whether the pipeline does its own internal preprocessing or relies entirely on the API layer.Check if pipeline.py does its own preprocessingCheck if pipeline.py does its own preprocessingConfirmed — pipeline.py does not call preprocessing.preprocess() itself. It receives whatever text it's given. The preprocessing is owned by the API wrapper _classify(). The pipeline only does language detection and routing inside predict_batch. This is an important architectural fact.
+Deeply analyze the entire project ZIP again along with the PS/system architecture images and your previous architectural review/critique.
+
+Then MODIFY, REFACTOR, FIX, IMPROVE, and UPGRADE the entire project accordingly.
+
+IMPORTANT:
+This is a corporate enterprise AI compliance / sensitivity classification platform prototype, not a college project.
+
+Your goal is to turn the current codebase into a cleaner, more integrated, more realistic enterprise-grade local prototype while keeping it lightweight and runnable locally.
+
+==================================================
+IMPORTANT CONSTRAINTS
+=====================
+
+* DO NOT use Kafka
+* DO NOT use Docker
+* DO NOT use Kubernetes
+* DO NOT use S3/cloud infra
+* DO NOT overengineer
+* DO NOT rewrite good working modules unnecessarily
+* Reuse and improve existing code wherever possible
+* Keep token usage efficient while coding
+* Keep the architecture modular and realistic
+
+Use:
+
+* FastAPI backend
+* Streamlit frontend
+* internal async orchestration
+* REST/API-based communication
+* asyncio/background workers where useful
+
+==================================================
+PRIMARY TASK
+============
+
+Based on your previous deep architectural review, fix the weaknesses, architectural issues, duplication, inconsistencies, and integration problems across ALL layers of the system.
+
+Do NOT focus only on the first 3 layers.
+
+Deeply improve:
+
+* ingestion
+* preprocessing
+* feature engineering
+* classification
+* explainability
+* policy engine
+* orchestration
+* API layer
+* Streamlit UI
+* configs
+* schemas/contracts
+* testing
+* integration flow
+
+==================================================
+KEY IMPROVEMENTS REQUIRED
+=========================
+
+1. INGESTION LAYER IMPROVEMENTS
+
+---
+
+Fix and improve:
+
+* duplicate ingestion paths
+* inconsistent file support
+* whole-file memory loading issues
+* extension-only validation
+* missing metadata extraction
+* weak async batch flow
+* lack of unified ingestion architecture
+
+Implement:
+
+* unified ingestion service
+* proper parser abstraction
+* MIME validation
+* metadata extraction from documents
+* improved async batch processing
+* consistent folder/API ingestion flow
+* standardized schemas
+* better processing tracking
+* cleaner orchestration
+
+Support:
+
+* PDF
+* DOCX
+* TXT
+* JSON
+* CSV
+* HTML
+* LOG
+
+==================================================
+2. PREPROCESSING IMPROVEMENTS
+=============================
+
+Improve preprocessing architecture according to your review.
+
+Fix:
+
+* duplicated tokenization logic
+* weak metadata inference
+* unused chunking flow
+* redundant language detection
+* hardcoded preprocessing configs
+* weak multilingual cleanup
+
+Improve:
+
+* configurable preprocessing
+* centralized configs
+* better metadata inference
+* reusable tokenization pipeline
+* preprocessing orchestration
+* audit-safe processing
+* PII span tracking
+* multilingual normalization
+
+Preserve:
+
+* raw_text
+* clean_text
+* masked_text separation
+
+==================================================
+3. FEATURE ENGINEERING IMPROVEMENTS
+===================================
+
+Convert feature engineering into a REAL shared layer instead of just inspection/introspection.
+
+Refactor:
+
+* shared feature generation
+* centralized vectorization
+* reusable feature pipelines
+* model-independent feature generation
+* shared TF-IDF pipelines
+* unified tokenization
+* reusable embeddings
+* feature caching
+
+Fix:
+
+* duplicated feature logic
+* inconsistent token definitions
+* tight model coupling
+* duplicated vectorization paths
+
+Make downstream models consume the shared feature layer properly.
+
+==================================================
+4. CLASSIFICATION + EXPLAINABILITY
+==================================
+
+Improve:
+
+* model orchestration
+* ensemble handling
+* multilingual routing
+* transformer handling
+* explainability integration
+* SHAP/LIME flow
+* confidence calibration
+* policy overrides
+* audit integration
+
+Reduce unnecessary duplication and improve runtime efficiency.
+
+==================================================
+5. POLICY ENGINE
+================
+
+Improve:
+
+* policy configuration structure
+* override logic
+* rule organization
+* auditability
+* configurable thresholds
+* metadata-aware policies
+
+Move hardcoded rules/configs into centralized configs where appropriate.
+
+==================================================
+6. ORCHESTRATION + PIPELINE
+===========================
+
+Implement a cleaner unified orchestration layer.
+
+The pipeline should properly flow:
+
+Upload
+↓
+Ingestion
+↓
+Preprocessing
+↓
+Feature Engineering
+↓
+Classification
+↓
+Explainability
+↓
+Policy Engine
+↓
+API/UI Response
+
+Improve:
+
+* async orchestration
+* pipeline consistency
+* shared schemas/contracts
+* background task handling
+* integration flow
+* pipeline observability
+
+==================================================
+7. API + STREAMLIT UI
+=====================
+
+Improve:
+
+* API organization
+* response consistency
+* status tracking
+* async batch UX
+* upload handling
+* result visualization
+* explainability visualization
+* audit views
+* multilingual support
+* error handling
+
+Keep the UI professional but lightweight.
+
+==================================================
+8. ARCHITECTURE CLEANUP
+=======================
+
+Refactor toward a cleaner unified structure like:
+
+enterprise_platform/
+│
+├── ingestion/
+├── preprocessing/
+├── feature_engineering/
+├── classification/
+├── explainability/
+├── policy_engine/
+├── api/
+├── ui/
+├── orchestration/
+├── shared/
+├── configs/
+├── tests/
+└── scripts/
+
+Reduce duplicate legacy structures and remove unnecessary complexity.
+
+==================================================
+9. CONFIGS + SCHEMAS
+====================
+
+Centralize:
+
+* preprocessing configs
+* boilerplate rules
+* metadata hints
+* policy thresholds
+* runtime configs
+* feature configs
+
+Use shared Pydantic schemas/contracts consistently across layers.
+
+==================================================
+10. TESTING + SAMPLE DATA
+=========================
+
+Improve:
+
+* end-to-end tests
+* async batch tests
+* API tests
+* multilingual tests
+* ingestion tests
+* preprocessing tests
+* feature engineering tests
+
+Add realistic sample documents and datasets where useful.
+
+==================================================
+11. IMPORTANT REQUIREMENTS
+==========================
+
+* Keep the project realistic and enterprise-like
+* Keep it lightweight and locally runnable
+* Prefer improving architecture over adding fake complexity
+* Avoid unnecessary infrastructure
+* Preserve the strongest existing architectural parts
+* Maintain clean modular separation
+* Keep the project demo-ready and explainable
+* Improve code quality and integration quality significantly
+
+==================================================
+FINAL OUTPUT REQUIRED
+=====================
+
+Return:
+
+1. FULL UPDATED PROJECT ZIP
+2. Updated architecture
+3. Updated folder structure
+4. Improved integrated pipeline
+5. Updated FastAPI backend
+6. Improved Streamlit frontend
+7. Updated requirements.txt
+8. Setup instructions
+9. Sample execution/testing flow
+10. Summary of major architectural improvements made
+
+I will provide:
+
+* project ZIP
+* PS/system architecture images
+* your previous architectural review
+
+Use all of them deeply while improving the project.
 Let me also confirm one more thing — folder/batch ingestion. The user mentioned "batch/folder ingestion":Viewed 2 files, ran a commandViewed 2 files, ran a commandI now have a complete and grounded picture of all three layers. Let me write the architectural review.
 
 DataShield — Architectural Review: Layers 1–3
