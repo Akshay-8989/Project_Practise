@@ -1,198 +1,95 @@
-# Banking Compliance and Regulatory Framework
+I'll extract the uploaded zip, inspect it thoroughly, run both subsystems end-to-end, and tell you exactly what setup is needed.Ran 2 commandsRan 2 commandsAll upgraded files are present. Now let me install dependencies and run real verification tests:Ran 2 commandsRan 2 commandsNow let me run a comprehensive verification battery — start the actual API, hit every endpoint with curl-equivalents, confirm both subsystems work.
+Test 1: Compile-check + verify all expected endpoints are registeredVerify all endpoints are registered correctlyVerify all endpoints are registered correctlyAll 9 new endpoints registered. All 9 pre-existing endpoints intact. Now hit them via TestClient:
+Test 2: Retraining workflow — full lifecycleRun the full retraining lifecycle testRun the full retraining lifecycle testInteresting — exit code 1. The stub script had a bug in the {sys=sys} interpolation. Let me look at the actual training log to see what happened:Check the actual stub errorCheck the actual stub errorThat's a bug in my test script, not in the orchestrator — the orchestrator correctly captured the failure. Let me fix the test and re-run:Re-run retraining test with corrected stubRe-run retraining test with corrected stubRetraining workflow: fully operational — subprocess launched, metrics parsed back, log captured, audit trail recorded.
+Test 3: Drift → SLA → Retraining linkageVerify drift SLA → retraining chain worksVerify drift SLA → retraining chain worksThe full drift → SLA → retraining → auto-close chain works.
+Test 4: mTLS end-to-end (real TLS server, real curl-style requests)Verify dev certs are valid X.509Verify dev certs are valid X.509Dev certs are valid. Now spin up a real uvicorn TLS server and hit it:Real mTLS end-to-end against live uvicorn TLS serverReal mTLS end-to-end against live uvicorn TLS serverEvery mTLS scenario works. Let me now clean up test artifacts so I don't pollute the user's view:Clean up test artifactsClean up test artifacts
+✅ Verification Result — Everything Works
+Summary of what I tested in your zip
+#TestResult1All 9 new endpoints registered + 9 pre-existing endpoints intact✅ Pass2AApproval gate (C4): empty approvers → 403✅ Pass2AApproval gate (C4): Legal only → 403✅ Pass2BPOST /mlops/retrain with valid approvers launches a real subprocess✅ Pass2Csummaries.json parsed back: F1 metrics threaded into run state✅ Pass2DTraining stdout captured to logs/retraining_runs/<id>/train.log✅ Pass2EAudit trail records run_submitted → run_started → run_succeeded✅ Pass2FRun shows up in GET /mlops/retrain/runs✅ Pass3Drift SLA case opened with 48h deadline, auto-closed on successful run, linked via closed_by_run_id✅ Pass4-T1mTLS: /health with Discover cert → 200✅ Pass4-T2mTLS: /security/whoami extracts Discover identity (CN, OU, fingerprint)✅ Pass4-T3mTLS: /security/whoami extracts Visa identity (proves allow-list works)✅ Pass4-T4/security/mtls/status returns full snapshot, ready=true✅ Pass4-T5No client cert → TLS handshake rejected✅ Pass4-T6Cert from untrusted CA → TLS handshake rejected✅ Pass4-T7logs/mtls_audit.jsonl records every accept/reject✅ Pass
+Both subsystems are fully operational in the uploaded zip.
 
-## Introduction
-Banking compliance refers to the adherence of financial institutions to laws, regulations, guidelines, and specifications relevant to their business processes. Compliance ensures that banks operate within legal boundaries and maintain trust with customers, regulators, and stakeholders.
+📦 What you need to download / set up
+Required (zero — everything else is included)
+The zip is self-contained for the local-demo case. No external accounts, no API keys, no cloud sign-ups, no Docker, no Kafka, no databases. Just Python.
+The one external thing you absolutely need:
 
-Regulatory compliance in banking is critical due to the sensitive nature of financial data, the risk of fraud, and the need for economic stability. Institutions must implement strong internal controls, monitoring systems, and reporting mechanisms.
+Python 3.10, 3.11, or 3.12 — the code uses standard CPython
+pip (comes with Python)
 
----
+That's it for the bare minimum.
+Step-by-step setup
+bash# 1. Extract
+unzip datashield_mtls_retraining__1_.zip
+cd datashield
 
-## Anti-Money Laundering (AML)
-Anti-Money Laundering (AML) regulations are designed to prevent criminals from disguising illegally obtained funds as legitimate income.
+# 2. Install Python deps (one command, ~2 minutes)
+pip install -r requirements.txt
+This will pull in scikit-learn, xgboost, fastapi, uvicorn, pdfplumber, python-docx, shap, lime, cryptography, mlflow, evidently, and others — all from PyPI, no accounts needed.
+bash# 3. Start the API + UI together
+python run.py
+If npm is on your PATH, this also auto-installs the React UI dependencies and starts the dev server. If you don't have npm, the API still works fine on its own — just use Swagger at http://localhost:8000/docs instead of the UI.
+Optional add-ons (only if you want full features)
+FeatureOptional installWhy optionalReact UI (the polished web interface)Node.js 18+ (https://nodejs.org) — run.py will auto-npm installWithout it, the API still works; use Swagger UI at /docsMLflow tracking server UIAlready installed by requirements.txt. To view it: mlflow ui --backend-store-uri sqlite:///logs/mlruns.dbWithout it, runs log to logs/experiments.jsonl instead — same data, just less prettyTransformer / DistilBERT modelspip install transformers torchWithout it, only LR + XGBoost run (still hits PS F1 targets). The README's "transformer enabled" path needs these.Presidio (stronger PII masking)pip install presidio-analyzer presidio-anonymizer && python -m spacy download en_core_web_lgWithout it, falls back to the regex masker (already very capable — SSN/IBAN/PAN/Aadhaar/email/phone/DOB)
+What does NOT need any setup
 
-### Key AML Requirements:
-- Customer Due Diligence (CDD)
-- Enhanced Due Diligence (EDD)
-- Suspicious Activity Reporting (SAR)
-- Transaction Monitoring Systems
+✅ mTLS — scripts/gen_dev_certs.py mints all the certs locally with the cryptography library (already in requirements.txt). Sample certs are already in the certs/ folder.
+✅ MLflow — uses a local SQLite file at logs/mlruns.db. No tracking server, no S3, no remote backend.
+✅ Models — pre-trained artifacts ship inside the zip (artifacts/en/ and artifacts/hi/). No initial training needed to use the API.
+✅ Synthetic data — data/synthetic_dataset.csv ships pre-generated.
+✅ No external service accounts — no AWS, no GCP, no OpenAI, no Anthropic, no Asana, no anything. All processing is in-process.
 
-### AML Process:
-1. Identify customer
-2. Verify identity
-3. Monitor transactions
-4. Report suspicious activities
 
-Failure to comply with AML regulations can result in heavy penalties and reputational damage.
+Quick verification you can run right now
+Quickest smoke test (1 minute)
+bashcd datashield
+pip install -r requirements.txt
+python -c "
+import sys; sys.path.insert(0, '.')
+from api import app
+paths = sorted({r.path for r in app.routes if hasattr(r, 'path')})
+required = ['/mlops/retrain', '/mlops/retrain/runs', '/mlops/drift/sla',
+            '/security/mtls/status', '/security/whoami', '/mlops/retrain/audit']
+for p in required:
+    print('✓' if p in paths else '✗', p)
+"
+If every line shows ✓ → upgrade is intact.
+Full retraining test (no mTLS, plain HTTP)
+bash# Terminal 1
+python api.py
 
----
+# Terminal 2
+curl -X POST http://localhost:8000/mlops/retrain \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "approvers":[
+      {"name":"Alice","role":"Legal"},
+      {"name":"Bob","role":"DataGov"}
+    ],
+    "reason":"verification",
+    "args":["--sample","200","--skip-transformer"]
+  }'
+# → returns run_id immediately
 
-## Know Your Customer (KYC)
-KYC is a mandatory process for identifying and verifying customer identity when opening an account.
+# Poll status:
+curl http://localhost:8000/mlops/retrain/runs/<run_id>
+# When it shows "status":"succeeded" → working
+mTLS test
+bash# Dev certs already in the zip's certs/ folder, but to regenerate:
+python scripts/gen_dev_certs.py
 
-### KYC Components:
-- Identity Verification
-- Address Verification
-- Risk Profiling
+# Edit configs/mtls.yaml → enabled: true
 
-Banks classify customers into:
-- Low Risk
-- Medium Risk
-- High Risk
+# Terminal 1
+python api.py
+# → starts on https://0.0.0.0:8443 with mTLS
 
-High-risk customers require enhanced monitoring.
+# Terminal 2 — works:
+curl --cacert certs/ca-cert.pem \
+     --cert certs/discover-cert.pem --key certs/discover-key.pem \
+     https://localhost:8443/security/whoami
 
----
+# Terminal 2 — fails (no cert):
+curl -k https://localhost:8443/health
+# → curl: (35) ... certificate required
 
-## Data Privacy and Protection
-Financial institutions must ensure data privacy under regulations such as GDPR and local data protection laws.
-
-### Key Principles:
-- Data Minimization
-- Purpose Limitation
-- Consent Management
-- Secure Storage
-
-Data breaches can lead to:
-- Financial losses
-- Legal penalties
-- Loss of customer trust
-
----
-
-## Fraud Detection and Prevention
-Banks implement fraud detection systems to identify suspicious transactions in real time.
-
-### Common Fraud Types:
-- Identity Theft
-- Credit Card Fraud
-- Phishing Attacks
-- Account Takeover
-
-### Detection Techniques:
-- Rule-based systems
-- Machine learning models
-- Behavioral analytics
-
----
-
-## Risk Management
-Risk management involves identifying, assessing, and mitigating risks.
-
-### Types of Risks:
-- Credit Risk
-- Market Risk
-- Operational Risk
-- Liquidity Risk
-
-Banks use risk scoring models to evaluate exposure and implement mitigation strategies.
-
----
-
-## Regulatory Reporting
-Banks must submit periodic reports to regulatory authorities.
-
-### Examples:
-- Financial statements
-- Suspicious transaction reports
-- Capital adequacy reports
-
-Automation of reporting ensures accuracy and compliance.
-
----
-
-## Internal Controls and Audits
-Internal controls are mechanisms to ensure operational efficiency and compliance.
-
-### Control Measures:
-- Segregation of duties
-- Access control
-- Audit trails
-
-Regular audits help detect gaps and improve systems.
-
----
-
-## Compliance Challenges
-- Increasing regulatory complexity
-- Data management issues
-- Integration of legacy systems
-- Real-time monitoring requirements
-
----
-
-## Role of Technology in Compliance
-Technology plays a crucial role in modern compliance systems.
-
-### Technologies Used:
-- Artificial Intelligence
-- Machine Learning
-- Big Data Analytics
-- Blockchain
-
-These technologies improve:
-- Efficiency
-- Accuracy
-- Fraud detection capabilities
-
----
-
-## Case Study: Fraud Detection System
-A bank implemented a machine learning-based fraud detection system that reduced fraudulent transactions by 35%.
-
-### Steps Taken:
-1. Data collection from transactions
-2. Feature engineering
-3. Model training
-4. Deployment in real-time pipeline
-
----
-
-## Conclusion
-Banking compliance is essential for maintaining trust, security, and stability in the financial system. With increasing regulations and technological advancements, institutions must continuously evolve their compliance strategies.
-
----
-
-## Frequently Asked Questions
-
-### What is AML?
-AML refers to Anti-Money Laundering regulations that prevent illegal financial activities.
-
-### What is KYC?
-KYC is the process of verifying customer identity.
-
-### Why is compliance important?
-Compliance ensures legal operation and builds trust.
-
-### What happens if a bank fails compliance?
-Penalties, legal actions, and reputational damage.
-
----
-
-## Extended Content for Testing Retrieval
-
-The compliance system should be able to:
-- Retrieve relevant sections based on queries
-- Answer questions about AML, KYC, fraud detection
-- Summarize regulatory requirements
-- Handle long documents efficiently
-
-The system should also support:
-- Multi-document retrieval
-- Semantic search
-- Context-aware responses
-
----
-
-## Repeated Section for Chunk Testing
-
-Compliance ensures that financial institutions follow rules and regulations.
-Compliance ensures that financial institutions follow rules and regulations.
-Compliance ensures that financial institutions follow rules and regulations.
-
-Fraud detection systems analyze transaction patterns.
-Fraud detection systems analyze transaction patterns.
-Fraud detection systems analyze transaction patterns.
-
----
-
-## End of Document
+Bottom line: zip is in good shape, both subsystems are verified working, and you only need Python + pip to run it. Everything else is optional polish.
