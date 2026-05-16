@@ -1,613 +1,314 @@
-Deeply analyze the entire project ZIP again along with the PS/system architecture images and your previous architectural review/critique.
-
-Then MODIFY, REFACTOR, FIX, IMPROVE, and UPGRADE the entire project accordingly.
-
-IMPORTANT:
-This is a corporate enterprise AI compliance / sensitivity classification platform prototype, not a college project.
-
-Your goal is to turn the current codebase into a cleaner, more integrated, more realistic enterprise-grade local prototype while keeping it lightweight and runnable locally.
-
-==================================================
-IMPORTANT CONSTRAINTS
-=====================
-
-* DO NOT use Kafka
-* DO NOT use Docker
-* DO NOT use Kubernetes
-* DO NOT use S3/cloud infra
-* DO NOT overengineer
-* DO NOT rewrite good working modules unnecessarily
-* Reuse and improve existing code wherever possible
-* Keep token usage efficient while coding
-* Keep the architecture modular and realistic
-
-Use:
-
-* FastAPI backend
-* Streamlit frontend
-* internal async orchestration
-* REST/API-based communication
-* asyncio/background workers where useful
-
-==================================================
-PRIMARY TASK
-============
-
-Based on your previous deep architectural review, fix the weaknesses, architectural issues, duplication, inconsistencies, and integration problems across ALL layers of the system.
-
-Do NOT focus only on the first 3 layers.
-
-Deeply improve:
-
-* ingestion
-* preprocessing
-* feature engineering
-* classification
-* explainability
-* policy engine
-* orchestration
-* API layer
-* Streamlit UI
-* configs
-* schemas/contracts
-* testing
-* integration flow
-
-==================================================
-KEY IMPROVEMENTS REQUIRED
-=========================
-
-1. INGESTION LAYER IMPROVEMENTS
-
----
-
-Fix and improve:
-
-* duplicate ingestion paths
-* inconsistent file support
-* whole-file memory loading issues
-* extension-only validation
-* missing metadata extraction
-* weak async batch flow
-* lack of unified ingestion architecture
-
-Implement:
-
-* unified ingestion service
-* proper parser abstraction
-* MIME validation
-* metadata extraction from documents
-* improved async batch processing
-* consistent folder/API ingestion flow
-* standardized schemas
-* better processing tracking
-* cleaner orchestration
-
-Support:
-
-* PDF
-* DOCX
-* TXT
-* JSON
-* CSV
-* HTML
-* LOG
-
-==================================================
-2. PREPROCESSING IMPROVEMENTS
-=============================
-
-Improve preprocessing architecture according to your review.
-
-Fix:
-
-* duplicated tokenization logic
-* weak metadata inference
-* unused chunking flow
-* redundant language detection
-* hardcoded preprocessing configs
-* weak multilingual cleanup
-
-Improve:
-
-* configurable preprocessing
-* centralized configs
-* better metadata inference
-* reusable tokenization pipeline
-* preprocessing orchestration
-* audit-safe processing
-* PII span tracking
-* multilingual normalization
-
-Preserve:
-
-* raw_text
-* clean_text
-* masked_text separation
-
-==================================================
-3. FEATURE ENGINEERING IMPROVEMENTS
-===================================
-
-Convert feature engineering into a REAL shared layer instead of just inspection/introspection.
-
-Refactor:
-
-* shared feature generation
-* centralized vectorization
-* reusable feature pipelines
-* model-independent feature generation
-* shared TF-IDF pipelines
-* unified tokenization
-* reusable embeddings
-* feature caching
-
-Fix:
-
-* duplicated feature logic
-* inconsistent token definitions
-* tight model coupling
-* duplicated vectorization paths
-
-Make downstream models consume the shared feature layer properly.
-
-==================================================
-4. CLASSIFICATION + EXPLAINABILITY
-==================================
-
-Improve:
-
-* model orchestration
-* ensemble handling
-* multilingual routing
-* transformer handling
-* explainability integration
-* SHAP/LIME flow
-* confidence calibration
-* policy overrides
-* audit integration
-
-Reduce unnecessary duplication and improve runtime efficiency.
-
-==================================================
-5. POLICY ENGINE
-================
-
-Improve:
-
-* policy configuration structure
-* override logic
-* rule organization
-* auditability
-* configurable thresholds
-* metadata-aware policies
-
-Move hardcoded rules/configs into centralized configs where appropriate.
-
-==================================================
-6. ORCHESTRATION + PIPELINE
-===========================
-
-Implement a cleaner unified orchestration layer.
-
-The pipeline should properly flow:
-
-Upload
-↓
-Ingestion
-↓
-Preprocessing
-↓
-Feature Engineering
-↓
-Classification
-↓
-Explainability
-↓
-Policy Engine
-↓
-API/UI Response
-
-Improve:
-
-* async orchestration
-* pipeline consistency
-* shared schemas/contracts
-* background task handling
-* integration flow
-* pipeline observability
-
-==================================================
-7. API + STREAMLIT UI
-=====================
-
-Improve:
-
-* API organization
-* response consistency
-* status tracking
-* async batch UX
-* upload handling
-* result visualization
-* explainability visualization
-* audit views
-* multilingual support
-* error handling
-
-Keep the UI professional but lightweight.
-
-==================================================
-8. ARCHITECTURE CLEANUP
-=======================
-
-Refactor toward a cleaner unified structure like:
-
-enterprise_platform/
-│
-├── ingestion/
-├── preprocessing/
-├── feature_engineering/
-├── classification/
-├── explainability/
-├── policy_engine/
-├── api/
-├── ui/
-├── orchestration/
-├── shared/
-├── configs/
-├── tests/
-└── scripts/
-
-Reduce duplicate legacy structures and remove unnecessary complexity.
-
-==================================================
-9. CONFIGS + SCHEMAS
-====================
-
-Centralize:
-
-* preprocessing configs
-* boilerplate rules
-* metadata hints
-* policy thresholds
-* runtime configs
-* feature configs
-
-Use shared Pydantic schemas/contracts consistently across layers.
-
-==================================================
-10. TESTING + SAMPLE DATA
-=========================
-
-Improve:
-
-* end-to-end tests
-* async batch tests
-* API tests
-* multilingual tests
-* ingestion tests
-* preprocessing tests
-* feature engineering tests
-
-Add realistic sample documents and datasets where useful.
-
-==================================================
-11. IMPORTANT REQUIREMENTS
-==========================
-
-* Keep the project realistic and enterprise-like
-* Keep it lightweight and locally runnable
-* Prefer improving architecture over adding fake complexity
-* Avoid unnecessary infrastructure
-* Preserve the strongest existing architectural parts
-* Maintain clean modular separation
-* Keep the project demo-ready and explainable
-* Improve code quality and integration quality significantly
-
-==================================================
-FINAL OUTPUT REQUIRED
-=====================
-
-Return:
-
-1. FULL UPDATED PROJECT ZIP
-2. Updated architecture
-3. Updated folder structure
-4. Improved integrated pipeline
-5. Updated FastAPI backend
-6. Improved Streamlit frontend
-7. Updated requirements.txt
-8. Setup instructions
-9. Sample execution/testing flow
-10. Summary of major architectural improvements made
-
-I will provide:
-
-* project ZIP
-* PS/system architecture images
-* your previous architectural review
-
-Use all of them deeply while improving the project.
-Let me also confirm one more thing — folder/batch ingestion. The user mentioned "batch/folder ingestion":Viewed 2 files, ran a commandViewed 2 files, ran a commandI now have a complete and grounded picture of all three layers. Let me write the architectural review.
-
-DataShield — Architectural Review: Layers 1–3
-This is a senior-engineer review traced against the actual code, not the docs. I'll walk through ingestion → preprocessing → feature engineering, then critique what works and what doesn't.
-
-0. Big Picture: How the Three Layers Are Wired
-The three layers are not chained together inside the pipeline. They're glued together by the API layer (api.py::_classify). That's the single most important architectural fact in this codebase, and it shapes everything below.
-                  ┌──────── app.py (Streamlit UI) ────────┐
-                  │  st.file_uploader → POST /classify/* │
-                  └────────────────┬──────────────────────┘
-                                   ▼
-                         api.py  (FastAPI)
-                                   │
-        ┌──────────────────────────┼───────────────────────────┐
-        ▼                          ▼                           ▼
-  /classify/file            /classify/batch              /classify
-   (single)                  (async N files)              (raw text)
-        │                          │                           │
-        ▼                          ▼                           │
-  extract_text_from_bytes()  (per-file, in a loop)             │
-   = LAYER 1                                                   │
-        │                          │                           │
-        └────────────┬─────────────┘                           │
-                     ▼                                         │
-                _classify(text, metadata, doc_id) ◄────────────┘
-                     │
-                     ├── preprocessing.preprocess()    ← LAYER 2
-                     │
-                     ├── feature_engineering.featurize() ← LAYER 3 (inspection only!)
-                     │
-                     └── pipeline.SensitivityClassifier.predict(raw_text)
-                          (re-detects language, runs models on RAW text)
-Layer 3 in this codebase is inspection-only. The classifier doesn't consume the FeatureSummary — it owns its own featurization inside LogisticModel and XGBoostModel. We'll come back to this; it's both a strength (separation of concerns) and a weakness (Layer 3 is decorative for inference).
-
-1. Layer 1 — Ingestion (ingestion.py)
-What it actually does
-A single-file module with two public functions:
-
-extract_text_from_file(file_path, filename) — path-based, used by no production caller (legacy/unused).
-extract_text_from_bytes(file_bytes, filename) — bytes-based, the only one actually called in production (by api.py lines 255 and 343).
-
-Both return (text, metadata) where metadata is just {source_file, file_type, size_bytes, char_count, word_count}.
-Supported formats
-SUPPORTED_FORMATS = ['.pdf', '.docx', '.doc', '.txt', '.md', '.csv', '.json', '.jsonl', '.html', '.htm', '.rtf', '.log']
-Dispatch is a flat if/elif chain on file extension. Each format has a private extractor:
-FormatLibraryFallbackPDFpdfplumberpypdfDOCXpython-docx—HTMLBeautifulSoupregex stripCSVstdlib csv.DictReader—JSON/JSONLstdlib json + line-by-line fallback—TXT/MD/LOG/RTFplain UTF-8 read—
-Failure is non-fatal: exceptions are caught, text = "[Extraction failed: ...]" is returned, and metadata['extraction_error'] is set. The pipeline keeps moving.
-Execution flow for an upload
-A user drops payroll.pdf into the Streamlit uploader at app.py:366:
-
-app.py:399 — f.read() reads the bytes; they're posted to POST /classify/file as multipart.
-api.py:254 — data = await file.read() re-buffers bytes from Starlette's UploadFile.
-api.py:255 — extract_text_from_bytes(data, file.filename) is called.
-Inside extract_text_from_bytes, the extension .pdf routes to _extract_pdf_bytes, which wraps the bytes in io.BytesIO and tries pdfplumber first.
-Returns (text, {source_file: 'payroll.pdf', file_type: 'pdf', size_bytes: ..., char_count: ..., word_count: ...}).
-Optional metadata enrichment from form fields (source_system, department) at lines 259–262.
-
-Async batch path (POST /classify/batch)
-This is not true async — it's a FastAPI BackgroundTasks worker:
-
-Client uploads N files.
-Loop at api.py:341–348: every file is read into memory and extracted synchronously, then accumulated into an items list.
-A job_id is generated, persisted to logs/async_jobs.json, and background_tasks.add_task(_run_batch_job, ...) queues it.
-_run_batch_job runs sequentially in the same event loop, classifying each item one at a time and writing progress to disk after every doc.
-Client polls GET /classify/status/{job_id}.
-
-Folder ingestion path (separate from the API)
-utils/io_helpers.py::read_documents() is used by scripts/predict_cli.py for CLI folder ingestion. It walks a directory with p.rglob('*'), yields (text, metadata) tuples, but is restricted to .txt / .log / .md / .csv / .json / .jsonl and explicitly refuses PDF/DOCX with UNSUPPORTED_EXT_MSG. This is a separate, weaker ingestion code path that exists in parallel to ingestion.py — see weaknesses below.
-Strengths
-
-Single dispatch surface: one extension → one extractor. Easy to add a new format (one helper + one branch).
-Resilient: extraction errors don't kill the request; they're tagged in metadata.
-Two-path API (path/bytes) covers both Streamlit uploads and disk reads cleanly.
-Library fallbacks (pdfplumber → pypdf, BeautifulSoup → regex) keep it deployable on slim images.
-
-Weaknesses
-
-No Apache Tika, no Kafka, no S3 — yet the architecture diagram (image 2) lists exactly those. The module's own docstring admits this: "No Kafka, no S3 — local file ingestion for laptop deployment." This is the largest gap vs the PS.
-Two parallel ingestion code paths (ingestion.py and utils/io_helpers.py) with different supported-format sets. io_helpers.py refuses PDF/DOCX; ingestion.py handles them. CLI users and API users get inconsistent capabilities. This is technical debt waiting to be a bug.
-Whole-file in-memory: await file.read() slurps the entire upload before any processing. A 200 MB PDF starves the worker.
-No streaming, no chunked upload, no virus scan, no MIME validation — only extension-based dispatch. A user renaming malware.exe to report.pdf gets it parsed.
-extract_text_from_file is dead code in production but maintained alongside extract_text_from_bytes with duplicated logic (the PDF/DOCX/HTML/CSV/JSON helpers all exist twice).
-Async batch is not concurrent. BackgroundTasks runs in the same process, sequentially. For 100 files you get N × per-doc-latency, not parallelism.
-
-PS alignment
-PS requirementRealityKafka / S3 / REST connectorsOnly REST. Kafka and S3 are absent.Apache TikaNot used — bespoke pdfplumber/python-docx wrappers.pdfplumber, python-docx✅ Used.Batch and real-time streamsReal-time only via REST; "batch" is just multi-file POST. No streaming.
-
-2. Layer 2 — Pre-processing (preprocessing.py)
-What it actually does
-This is the cleanest, most well-designed layer in the project. It exposes one function:
-pythonpreprocess(text, metadata) -> PreprocessedDoc
-PreprocessedDoc is a dataclass holding three parallel views of the text:
-
-raw_text — original, untouched. What the policy engine and classifier see.
-clean_text — normalized. What feature engineering and TF-IDF see.
-masked_text — PII replaced with <EMAIL>, <US_SSN>, etc. What the audit log sees.
-
-This separation is the architectural insight of the layer: the same document has different audiences with different trust levels, and they each get the appropriate view.
-Execution flow inside preprocess()
-For an input text like "Employee SSN 123-45-6789, salary $142,000, HR review.":
-
-clean_text() (line 108) runs four sub-steps in order:
-
-_unicode_normalize — NFKC normalization (handles width, ligatures; preserves Devanagari for Hindi).
-_strip_control_chars — kills \x00–\x1f except newline/tab.
-_strip_boilerplate — five regexes that nuke email quote lines (> ...), separators (----), "Sent from my iPhone", confidentiality footers, unsubscribe lines.
-_collapse_whitespace — multi-space → single, multi-newline → double.
-
-
-detect_language(cleaned) (from utils/language_detector.py) — pure Unicode-script counting. If ≥15% Devanagari → 'hi'; if ≥85% Latin → 'en'; else 'unknown'. O(n), deterministic, no model dependency.
-masker.mask(cleaned) — calls the singleton from utils/presidio_masker.py:
-
-Primary: Microsoft Presidio (AnalyzerEngine + AnonymizerEngine), constrained to a fixed entity list (US_SSN, CREDIT_CARD, IBAN_CODE, IN_PAN, IN_AADHAAR, EMAIL_ADDRESS, PHONE_NUMBER, etc.), threshold 0.4.
-Fallback: if Presidio or its spaCy model isn't installed, transparently falls back to utils/pii_masker.py — eight regex patterns. The singleton caches Presidio's heavy init.
-
-
-tokenize(cleaned) — regex \w+(?:'\w+)?. Cheap, deterministic, Unicode-aware (works for both EN and HI).
-chunk_text(cleaned, max_tokens=480) — paragraph-aware greedy packing into ≤480-token chunks. Sized for BERT's 512-wordpiece cap.
-infer_metadata(cleaned, metadata) — keyword scan of the first 2000 chars for source/department hints (e.g., 'salary' → 'HR', 'invoice' → 'Finance'). Fills UNKNOWN defaults. Attaches detected_language.
-Returns the PreprocessedDoc. It also exposes a for_audit() method that strips raw_text/clean_text and gives only a masked preview + counts — used at api.py:202 so audit logs never see raw content.
-
-How data moves out
-After preprocess() returns at api.py:178:
-
-pre.clean_text → feature_engineering.featurize(pre.clean_text, lang=pre.detected_language) at line 182.
-pre.raw_text → clf.predict(pre.raw_text, pre.metadata, doc_id=doc_id) at line 188. The classifier deliberately gets raw text because the downstream PolicyEngine needs the live PII patterns to fire its "if Restricted token detected → override to Restricted" rule (system architecture image 3).
-pre.for_audit() → embedded in the final response.
-
-Schemas / contracts
-The contract is the @dataclass PreprocessedDoc. It carries 11 fields + a to_dict() and a safe-for-audit for_audit() projection. Type hints are honest; Dict[str, Any] is only used for the loose metadata dict.
-Strengths
-
-Three-view design (raw / clean / masked) is the right model. Each downstream consumer gets the view it should have.
-Idempotent clean_text — safe to call twice.
-Presidio + regex defense-in-depth — exactly what the architecture image (3) calls for. Singleton avoids reloading spaCy.
-Boilerplate patterns are conservative — they target high-confidence noise (signature lines, footers), not document content.
-Hindi handled correctly — NFKC normalization preserves Devanagari, tokenizer regex is Unicode-aware, language detector is script-based.
-for_audit() projection enforces Constraint C1 ("No raw PII stored post-classification") at the API boundary.
-
-Weaknesses
-
-The classifier doesn't actually use clean_text. _classify passes pre.raw_text to the pipeline (line 188). The cleaning helps feature engineering and audit, but the live prediction is on the unclean text. This is a deliberate choice (policy engine needs PII patterns) but it means cleaning gives a smaller lift than it appears.
-Metadata inference is naive. _DEPT_HINTS = {'salary': 'HR', 'invoice': 'Finance'} is keyword-matching on the first 2000 chars. A finance email about an HR salary survey will be misclassified.
-No PII span tracking. masker.mask() returns the masked text and entity types — but doesn't return spans/offsets. If a downstream consumer needed to know where PII was found in the original document, the information is gone.
-Chunking is built but never consumed downstream. pre.chunks is computed eagerly but the only consumer is the API preview endpoint. The transformer model (which is what the 512-token limit was for) operates on whole texts elsewhere.
-Boilerplate patterns are English-only. The Hindi route gets no equivalent stripping.
-detect_language is called twice: once in preprocessing.preprocess, once inside pipeline.predict_batch._route. Cheap, but redundant — the pipeline could trust the metadata.
-
-PS alignment
-PS requirementRealityText cleaning✅PII masking (Presidio)✅ with regex fallbackTokenization✅ (lightweight)Metadata extraction⚠️ Keyword-hint based onlyLanguage detection → route to language-specific model✅ EN + HI, but only those two
-
-3. Layer 3 — Feature Engineering (feature_engineering.py)
-Critical thing to understand first
-This layer does not produce features that the classifier consumes. Read the module docstring carefully:
-
-"The classifier module already does featurization internally — this layer wraps that with introspection: you can ask 'what features did doc X produce?' without running the full classifier."
-
-The actual featurization for inference lives inside the models themselves:
-
-LogisticModel (models/logistic_model.py) holds a sklearn.Pipeline([TfidfVectorizer, LogisticRegression]) — the vectorizer is part of the joblib artifact.
-XGBoostModel (models/xgboost_model.py) holds a HashingVectorizer(n_features=512, ngram_range=(1,2)) + one-hot encoders for source_system / department / file_type + 4 numeric stats — all assembled in its private _featurize().
-The transformer carries its own tokenizer.
-
-feature_engineering.featurize() is a read-only mirror of those features, built for the UI's "Feature Preview" panel and the POST /features/preview API endpoint.
-What featurize() actually returns
-A FeatureSummary dataclass containing:
-
-tfidf_top: List[(token, weight)] — top-k TF-IDF tokens for this doc, computed by reaching into the trained LogisticModel and calling its persisted TfidfVectorizer.transform([text]), then argsort-top-k.
-unigram_count, bigram_count — whitespace-split counts.
-numeric_features — {num_chars, num_tokens, num_digits, digit_ratio}. Mirrors what XGBoost uses, but recomputed (not shared).
-embedding_dim, embedding_norm — populated only if a transformer artifact exists. Calls TransformerModel.encode([text]) if model.encode exists. Otherwise None.
-vocab_size, used_language — bookkeeping.
-
-Execution flow
-For each request hitting _classify:
-
-api.py:182 — feat = feature_engineering.featurize(pre.clean_text, lang=pre.detected_language, top_k=8).
-Inside featurize():
-
-tfidf_top_tokens(text, lang, top_k) calls _logistic_model_for_lang(lang), which lazy-loads the LogisticModel joblib from artifacts/en/logistic.joblib or artifacts/hi/logistic.joblib on first call. The result is cached in a function-attached dict (_logistic_model_for_lang._cache) — so the second request reuses it.
-It reaches into model.pipeline.named_steps['tfidf'], calls vec.transform([text]), sorts the resulting sparse row, and returns the top-k indices.
-_ngram_counts and _numeric_features are pure functions on the text.
-embed_optional is tried (returns None unless a fine-tuned transformer artifact is present).
-
-
-The summary becomes part of the API response (final['features'] = feat.to_dict() at line 203).
-
-Strengths
-
-Genuine introspection. The TF-IDF top-k is computed from the actual trained vectorizer, not a separate one. This is honest — what the UI shows is what the model literally sees.
-Lazy + cached model loading. Module-attribute cache via _logistic_model_for_lang._cache keeps it cheap.
-Graceful absence of transformer. embed_optional returns None if torch isn't installed or no artifact exists. No exceptions bubble up.
-Separately addressable. Exposing POST /features/preview as a standalone endpoint lets compliance auditors inspect what the model would "see" without consuming a classification slot — and that's exactly what the architecture image-3 row "Feature Engineering" needs.
-
-Weaknesses
-
-It is conceptually a projection of the model, not a layer. A Layer in the PS sense is supposed to produce features for downstream models. This module instead re-derives them for display. The actual feature pipeline lives in LogisticModel.__init__ and XGBoostModel._featurize and is duplicated/inconsistent between them.
-Tight coupling to LogisticModel's internals — model.pipeline.named_steps['tfidf'] is a hard dependency on a specific sklearn pipeline shape. If you ever swap LR for SGDClassifier with a different step name, this breaks silently.
-TF-IDF "top tokens" is a poor proxy for what XGBoost or the transformer key on. The UI shows TF-IDF tops as if they're "the features," but the XGBoost ensemble member uses hashed features (no recoverable vocab) and metadata one-hots — none of which this summary surfaces. The auditor gets a misleading picture.
-Triple-counted tokenization: this module's _ngram_counts uses text.split(); XGBoost's _numeric_features uses text.split(); preprocessing's tokenize uses a regex. Three slightly different definitions of "token" floating around.
-Lang fallback unfair: if you ask for lang='hi' but no Hindi LR artifact exists, tfidf_top silently returns []. No telemetry. The UI just shows an empty list with no explanation.
-embed_optional reloads the transformer on every call if not cached — it doesn't share the cache with the pipeline's already-loaded transformer. Two copies in memory in the worst case.
-
-PS alignment
-PS requirementRealityTF-IDF + n-gram baselines✅ — inside LogisticModel.Contextual embeddings (BERT/RoBERTa/DeBERTa) on domain corpus⚠️ Optional, behind force_mode='fast' flag, defaults to NOT loaded. feature_engineering.embed_optional only surfaces stats.Domain corpus fine-tuning⚠️ Synthetic dataset, fast-finetune mode freezes encoder and trains only the classification head.
-
-4. End-to-End Trace (User Story)
-User uploads salary_review.pdf via the Streamlit UI:
-
-app.py:399 — f.read() → bytes → POST to /classify/file.
-api.py:254–255 — data = await file.read(); text, file_meta = extract_text_from_bytes(data, 'salary_review.pdf').
-ingestion.py:70 — .pdf branch → _extract_pdf_bytes(data) → pdfplumber → returns joined page text. file_meta = {source_file, file_type='pdf', size_bytes, char_count, word_count}.
-api.py:259–262 — Optional form fields (source_system, department) merged into file_meta.
-api.py:264 — _classify(text, file_meta, doc_id).
-api.py:178 — pre = preprocessing.preprocess(text, file_meta):
-
-clean → language='en' → Presidio masks the SSN/PAN/credit-card patterns → tokenize → chunk → infer 'salary' → department='HR' → return PreprocessedDoc.
-
-
-api.py:182 — feat = feature_engineering.featurize(pre.clean_text, lang='en', top_k=8):
-
-Lazy-load artifacts/en/logistic.joblib (first call only).
-TF-IDF transform pre.clean_text against persisted vectorizer → top-8 tokens like [('salary', 0.34), ('employee', 0.22), …].
-Compute n-gram counts + numeric stats.
-embed_optional returns None (fast mode, no transformer artifact).
-
-
-api.py:187–188 — clf = get_pipeline() (lazy, cached). raw_result = clf.predict(pre.raw_text, pre.metadata, doc_id=doc_id). Notice: the raw text, not pre.clean_text — because the policy engine downstream needs the live PII patterns.
-Inside pipeline.py: detect_language(text) runs again, routes to _LanguageModelSet('en'), runs LR + XGBoost (transformer skipped in fast mode), votes/stacks → label 'Confidential', confidence 0.94. PolicyEngine sees raw text, sees no Restricted-tier tokens, leaves label alone. SHAP + fast LIME fallback (because confidence > 0.90 threshold) produce evidence tokens.
-api.py:191–211 — Response assembled: label, confidence, evidence, preprocessing summary (pre.for_audit()), feature summary, latency breakdown, timestamp.
-api.py:215–224 — webhooks.fire_classification(...) posts to any registered DLP/CASB webhooks (best-effort, errors swallowed).
-AuditLogger in pipeline writes a line to logs/audit.jsonl.
-Response returns to Streamlit; render_result() displays it.
-
-For batch: same flow, but in a loop, sequentially, with periodic writes to logs/async_jobs.json.
-
-5. Cross-Cutting Architectural Assessment
-Enterprise-level choices that are correct
-
-Lazy pipeline loading with double-checked locking (api.py:74–85) — import-time is cheap, first request pays the cost. Correct for serverless and dev-loop ergonomics.
-Defense-in-depth masking — Presidio primary + regex fallback + for_audit() projection. C1 (no raw PII persisted) is enforced at every write boundary.
-Language routing as a first-class concept — separate model sets per language, separate artifact directories. Matches the architecture-image-3 row.
-Idempotent, dataclass-based contracts between layers (PreprocessedDoc, FeatureSummary) — easier to test, easier to swap implementations.
-force_mode='fast' at api.py:84 is a deliberate latency-vs-accuracy lever. The pipeline knows about it and reports runtime_mode in audit. This is exactly the kind of operational dial enterprise teams need.
-Audit + override + approval logs as JSONL — append-only, replay-able, easy to migrate to a real store later.
-
-Unnecessary complexity / duplication
-
-Two ingestion paths (ingestion.py for API, utils/io_helpers.py for CLI) with diverging format support. They should be one.
-Two copies of every PDF/DOCX/HTML/CSV/JSON extractor in ingestion.py (path-based and bytes-based) — collapse them via io.BytesIO.
-Three near-duplicate "numeric features" definitions: feature_engineering._numeric_features, xgboost_model._numeric_features, preprocessing.tokenize. Tokens get redefined in three places.
-detect_language called twice per request (preprocessing + pipeline routing). Cheap, but the second call should trust pre.detected_language from the metadata.
-Boilerplate patterns live inline as a module-level constant in preprocessing.py. For an enterprise system they should be in configs/ with the policy/threshold tables — Constraint C2 requires auditability.
-
-Architectural strengths
-
-Single response object containing label + confidence + evidence + policy_action + preprocessing audit + feature summary + per-layer latency + audit metadata. One API call, complete trace. Excellent for compliance reviewers.
-Per-layer latency telemetry in the response (latency_ms.preprocessing, latency_ms.features, latency_ms.classification). Saved my time when reviewing — this is rare and great.
-Tests for each layer (tests/test_end_to_end.py, tests/test_language_detector.py, tests/test_latency_fix.py) — the test suite exists and exercises the integration points.
-
-Architectural weaknesses
-
-The whole "ingestion layer" promised by the architecture (Kafka/S3/Apache Tika) is absent. What ships is a REST upload handler and a per-format dispatcher. For a "scalable, automated mechanism" (PS line 1), this is the biggest gap. A laptop demo masquerading as an ingestion service.
-Layer 3 is a mirror, not a layer. The PS calls Feature Engineering an independent layer; in this code it's an introspection wrapper. The real featurization is buried inside model classes and is not separately swappable. If you wanted to swap from hashing-vectorizer to SentenceTransformer embeddings for XGBoost, you'd have to edit xgboost_model.py, not a feature engineering module.
-No streaming end-to-end. Everything is read-all-into-memory. PS expects "batch and real-time streams." This is real-time-only with a synchronous-loop pretending to be batch.
-No content-type validation, no AV scan, no MIME sniff. Ingestion trusts the filename extension. C5 mentions mTLS — but ingestion-layer file safety isn't addressed at all.
-Metadata layer is undercooked. PS lists source system, file type, author, department, creation date. We get source_system, department (both via keyword-hints), file_type — but author and creation date are never extracted from the document itself, even though PDF and DOCX carry them in their properties.
-
-What should be improved (priority-ordered)
-
-Make Layer 3 a real layer. Move LogisticModel's TfidfVectorizer and XGBoostModel._featurize into a shared feature_engineering.build_features(preprocessed_doc) -> FeatureMatrix and have the models accept the matrix as input. This makes featurization swappable and testable independently. The current "inspection" view becomes a free byproduct.
-Collapse the two ingestion paths. Delete utils/io_helpers.py's ad-hoc reader; route the CLI through ingestion.extract_text_from_file. One source of truth for which formats are supported.
-Extract author/creation-date from PDF/DOCX metadata. pdfplumber.PDF.metadata and python-docx.Document.core_properties.created/author are one-liners. The PS lists them; we currently throw them away.
-Add a real async path. Either Celery + Redis or asyncio.gather over ThreadPoolExecutor. BackgroundTasks sequential loop is fine for demos, not for a payments-vendor production claim.
-Move boilerplate patterns + dept/source hints into configs/ so they're versioned with the policy and pass audit (C2). Currently hard-coded.
-Track PII spans, not just types. Presidio returns offsets — preserve them in PreprocessedDoc so the UI can highlight redactions. Today the offset information is computed by Presidio and immediately thrown away.
-Replace extension-based dispatch with a proper MIME check (python-magic) before the extractor chain. Stops .pdf-renamed-malware at the door.
-Cache the transformer in one place, not separately in pipeline._LanguageModelSet and feature_engineering.embed_optional.
-
-
-6. TL;DR Summary Table
-AspectLayer 1 IngestionLayer 2 PreprocessingLayer 3 Feature Eng.File / moduleingestion.py (+ utils/io_helpers.py parallel path)preprocessing.py (+ utils/presidio_masker.py, utils/pii_masker.py, utils/language_detector.py)feature_engineering.pyEntry functionextract_text_from_bytes()preprocess() → PreprocessedDocfeaturize() → FeatureSummaryCalled fromapi.py /classify/file, /classify/batchapi.py::_classify (every request)api.py::_classify and /features/previewContract(text, metadata) tuplePreprocessedDoc dataclassFeatureSummary dataclassPS-alignmentWeak — no Kafka/S3/TikaStrong — matches arch-3 rowMixed — introspection only, real featurization is buried in modelsBiggest strengthFormat coverage + graceful failure3-view (raw/clean/masked) separation, Presidio + regex defense-in-depthReal persisted-vectorizer introspectionBiggest weaknessTwo parallel ingestion paths, in-memory only, no streamingCleaning helps audit but classifier sees raw text anywayNot consumed by inference — purely cosmetic for the prediction path
-The codebase is a well-engineered laptop prototype with strong Layer 2, decent Layer 1, and an honest-but-misnamed Layer 3. To match the architecture diagram it would need a real ingestion layer (Kafka/S3/Tika) and a Layer 3 that the models actually depend on, instead of one that mirrors what they already compute internally.
+Good question — let me walk you through verifying both end-to-end on the upgraded zip. I'll give you copy-pasteable commands and tell you exactly what "working" looks like.
+
+Setup (one-time)
+bash# 1. Extract the zip
+unzip datashield_mtls_retraining.zip
+cd datashield
+
+# 2. Install deps
+pip install -r requirements.txt
+
+# 3. Start the API
+python api.py
+# Leave this terminal running. Open a SECOND terminal for the commands below.
+You should see in the API terminal:
+[API] Starting DataShield API on http://127.0.0.1:8000
+[API] Docs at http://127.0.0.1:8000/docs
+That's plain HTTP — mTLS is off by default. Good. We'll turn it on in Part B.
+
+Part A — Verify the Retraining workflow
+This part doesn't need mTLS. Keep the API on plain HTTP for now.
+A1. Confirm the new endpoints exist
+bashcurl -s http://localhost:8000/openapi.json | python -c "
+import json, sys
+spec = json.load(sys.stdin)
+for path in sorted(spec['paths']):
+    if 'retrain' in path or 'drift' in path or 'security' in path:
+        for method in spec['paths'][path]:
+            print(f'{method.upper():6s} {path}')
+"
+What you should see — every endpoint below is present:
+GET    /mlops/drift
+GET    /mlops/drift/sla
+POST   /mlops/retrain
+GET    /mlops/retrain/audit
+GET    /mlops/retrain/runs
+GET    /mlops/retrain/runs/{run_id}
+GET    /mlops/retrain/runs/{run_id}/log
+GET    /security/mtls/audit
+GET    /security/mtls/status
+GET    /security/whoami
+If any are missing → the upgraded files aren't being picked up. Double-check you're in the upgraded datashield/ folder.
+A2. Verify the approval gate (Constraint C4)
+This MUST reject — proves dual-approval enforcement is alive:
+bash# (a) No approvers at all → 403
+curl -s -X POST http://localhost:8000/mlops/retrain \
+  -H 'Content-Type: application/json' \
+  -d '{"approvers": [], "reason": "test"}' | python -m json.tool
+Expect: "detail": "No approvers supplied — Constraint C4 requires..."
+bash# (b) Only Legal, missing DataGov → 403
+curl -s -X POST http://localhost:8000/mlops/retrain \
+  -H 'Content-Type: application/json' \
+  -d '{"approvers":[{"name":"Alice","role":"Legal"}],"reason":"test"}' | python -m json.tool
+Expect: "detail": "Insufficient approvers. Need at least one Legal AND one Data Governance approver..."
+If both return errors like above → ✅ approval gate works.
+A3. Launch a real retraining run
+bashcurl -s -X POST http://localhost:8000/mlops/retrain \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "approvers": [
+      {"name": "Alice Legal",  "role": "Legal"},
+      {"name": "Bob DataGov",  "role": "DataGov"}
+    ],
+    "reason": "verification run",
+    "args": ["--sample", "200", "--skip-transformer"],
+    "requested_by": "me@test"
+  }' | python -m json.tool
+Expected response (immediate, ~50ms):
+json{
+    "run_id": "20260516T120000-abc12345",   ← copy this
+    "status": "queued",
+    "requested_at_utc": "...",
+    "approvers": [...],
+    "cli_args": ["--sample", "200", "--skip-transformer"],
+    "log_path": "logs/retraining_runs/.../train.log",
+    "sla_case_id": null
+}
+✅ The API returns immediately — training runs in the background.
+A4. Watch the run progress
+Replace RUN_ID with the value from A3:
+bashRUN_ID="20260516T120000-abc12345"   # ← paste yours
+
+# Poll status — status will go queued → running → succeeded
+watch -n 2 "curl -s http://localhost:8000/mlops/retrain/runs/$RUN_ID | python -m json.tool | head -20"
+You'll see status transition. Press Ctrl+C when it shows "status": "succeeded".
+A5. Verify the training log was captured
+bashcurl -s "http://localhost:8000/mlops/retrain/runs/$RUN_ID/log?tail=40" | python -c "
+import json, sys
+d = json.load(sys.stdin)
+print('=== last', d['lines_returned'], 'lines of', d['total_lines'], 'total ===')
+print(d['log'])
+"
+You should see actual train_all.py output: per-language [train:en] lines, classification_report tables, F1 scores. That proves a real subprocess ran — not a stub.
+A6. Verify metrics were captured back into the system
+bashcurl -s http://localhost:8000/mlops/retrain/runs/$RUN_ID | python -c "
+import json, sys
+state = json.load(sys.stdin)
+print('Status:    ', state['status'])
+print('Exit code: ', state['exit_code'])
+print('MLflow:    ', state.get('mlflow_logged'))
+print()
+summary = state.get('summary') or {}
+print('Languages trained:', summary.get('aggregate', {}).get('languages_trained'))
+print('Avg macro-F1:    ', summary.get('aggregate', {}).get('macro_f1_stacker_avg'))
+print()
+for lang_s in summary.get('per_language', []):
+    print(f'  {lang_s[\"lang\"]}: F1 LR={lang_s[\"macro_f1_lr\"]:.3f} '
+          f'XGB={lang_s[\"macro_f1_xgb\"]:.3f} stacker={lang_s[\"macro_f1_stacker\"]:.3f}')
+"
+Expect output like:
+Status:     succeeded
+Exit code:  0
+MLflow:     True
+Languages trained: ['en', 'hi']
+Avg macro-F1:    0.91
+
+  en: F1 LR=0.890 XGB=0.910 stacker=0.920
+  hi: F1 LR=0.870 XGB=0.890 stacker=0.900
+✅ Means the orchestrator parsed artifacts/summaries.json and threaded the metrics back.
+A7. Verify the audit trail
+bashcurl -s "http://localhost:8000/mlops/retrain/audit?limit=10" | python -c "
+import json, sys
+d = json.load(sys.stdin)
+for e in d['entries']:
+    print(f'  {e[\"timestamp_utc\"]:30s} {e[\"event\"]:20s} run={e.get(\"run_id\",\"\")[:20]}')
+"
+Expect three events per run, newest first:
+  ...   run_succeeded         run=20260516T120000-...
+  ...   run_started           run=20260516T120000-...
+  ...   run_submitted         run=20260516T120000-...
+✅ Full state transition trail = governance ready.
+A8. Verify the Drift SLA workflow (drift → SLA case → retrain → auto-close)
+This is the marquee feature — the chain that proves everything is wired together:
+bash# (a) Force a drift report
+curl -s http://localhost:8000/mlops/drift | python -c "
+import json, sys
+r = json.load(sys.stdin)
+print('PSI score:        ', r.get('psi_score'))
+print('Drift detected:   ', r.get('drift_detected'))
+print('Drift critical:   ', r.get('drift_critical'))
+print('Recommendation:   ', r.get('recommendation'))
+"
+bash# (b) Check SLA dashboard
+curl -s http://localhost:8000/mlops/drift/sla | python -c "
+import json, sys
+d = json.load(sys.stdin)
+print('Summary:', d['summary'])
+print('Open cases:', len(d['open_cases']))
+for c in d['open_cases']:
+    print(f'  {c[\"case_id\"]} deadline={c[\"deadline_utc\"]} hours_remaining={c[\"hours_remaining\"]}')
+"
+If drift is critical, an SLA case will open automatically with a 48-hour deadline. Now launch a retraining linked to it:
+bash# (c) Grab the case_id if one exists, otherwise skip this step
+CASE_ID=$(curl -s http://localhost:8000/mlops/drift/sla | python -c "
+import json, sys
+d = json.load(sys.stdin)
+if d['open_cases']:
+    print(d['open_cases'][0]['case_id'])
+")
+echo "Open case: $CASE_ID"
+
+# (d) Retrain with the SLA case linkage
+curl -s -X POST http://localhost:8000/mlops/retrain \
+  -H 'Content-Type: application/json' \
+  -d "{
+    \"approvers\": [{\"name\":\"A\",\"role\":\"Legal\"},{\"name\":\"B\",\"role\":\"DataGov\"}],
+    \"reason\": \"closing drift SLA $CASE_ID\",
+    \"sla_case_id\": \"$CASE_ID\",
+    \"args\": [\"--sample\", \"200\", \"--skip-transformer\"]
+  }" | python -m json.tool
+Wait until status is succeeded, then:
+bash# (e) Verify the SLA case was auto-closed and linked to the run
+curl -s http://localhost:8000/mlops/drift/sla | python -c "
+import json, sys
+d = json.load(sys.stdin)
+print('Open cases after retrain:', len(d['open_cases']))
+print()
+print('Recent case history:')
+for c in d['all_cases'][:3]:
+    print(f'  {c[\"case_id\"]}: status={c[\"status\"]} closed_by_run_id={c.get(\"closed_by_run_id\")}')
+"
+✅ You should see the open case is now status=resolved with closed_by_run_id pointing at your retraining run. The full drift → retrain → close loop is verified.
+
+Part B — Verify mTLS (Constraint C5)
+Stop the API (Ctrl+C in the API terminal). We're switching to TLS mode.
+B1. Mint dev certs
+bashpython scripts/gen_dev_certs.py
+Expect:
+[gen_dev_certs] minting new CA → certs/ca-cert.pem
+[gen_dev_certs] wrote server cert (CN=localhost) → certs/server-cert.pem
+[gen_dev_certs] wrote client cert (CN=discover.payments.client) → certs/discover-cert.pem
+[gen_dev_certs] wrote client cert (CN=visa.payments.client) → certs/visa-cert.pem
+[gen_dev_certs] wrote client cert (CN=amex.payments.client) → certs/amex-cert.pem
+Verify the certs are real X.509:
+bashopenssl x509 -in certs/discover-cert.pem -noout -subject -issuer -ext subjectAltName 2>/dev/null
+You should see:
+subject=C = US, ST = Dev, L = Local, O = Payments Client, OU = Payments, CN = discover.payments.client
+issuer=C = US, ST = Dev, L = Local, O = DataShield Dev CA, OU = Security, CN = DataShield Local Dev CA
+X509v3 Subject Alternative Name:
+    DNS:discover.payments.client, DNS:discover-api.example.com
+✅ CN=discover.payments.client, OU=Payments, issued by your dev CA.
+B2. Enable mTLS
+Edit configs/mtls.yaml:
+yamlmtls:
+  enabled: true          # ← change from false
+(Leave everything else default.)
+B3. Start the API with mTLS
+bashpython api.py
+Expect:
+[API] Starting DataShield API on https://0.0.0.0:8443
+[API] Docs at https://0.0.0.0:8443/docs
+[API] mTLS ENABLED — server cert=certs/server-cert.pem, client CA=certs/ca-cert.pem, cert_reqs=VerifyMode.CERT_REQUIRED
+✅ Note the https://...:8443 and the mTLS ENABLED line. If you see this, TLS is bound. In a separate terminal:
+B4. Try without a client cert → should be rejected
+bashcurl -k https://localhost:8443/health
+Expect a TLS handshake error:
+curl: (35) ... alert certificate required
+✅ Server demanded a cert and refused without one.
+B5. Connect with a valid client cert
+bashcurl --cacert certs/ca-cert.pem \
+     --cert certs/discover-cert.pem \
+     --key  certs/discover-key.pem \
+     https://localhost:8443/health
+Expect:
+json{"status":"ok","pipeline_loaded":false,"timestamp_utc":"..."}
+✅ TLS handshake succeeded, certs accepted.
+B6. Verify the identity is being read correctly
+bashcurl --cacert certs/ca-cert.pem \
+     --cert certs/discover-cert.pem --key certs/discover-key.pem \
+     https://localhost:8443/security/whoami | python -m json.tool
+Expect:
+json{
+    "client_identity": {
+        "common_name": "discover.payments.client",
+        "organizational_unit": "Payments",
+        "organization": "Payments Client",
+        "subject_alt_names": ["discover.payments.client", "discover-api.example.com"],
+        "fingerprint_sha256": "abc123...",
+        "issuer_cn": "DataShield Local Dev CA",
+        ...
+    },
+    "client_name": "discover",
+    "mtls_enabled": true
+}
+✅ Server identified you as Discover via the allow-list match. Try Visa to double-check:
+bashcurl --cacert certs/ca-cert.pem \
+     --cert certs/visa-cert.pem --key certs/visa-key.pem \
+     https://localhost:8443/security/whoami | python -c "
+import json, sys
+d = json.load(sys.stdin)
+print('client_name:', d['client_name'])
+print('cn:', d['client_identity']['common_name'])
+"
+Expect: client_name: visa, cn: visa.payments.client. ✅
+B7. Check the mTLS configuration snapshot
+bashcurl --cacert certs/ca-cert.pem \
+     --cert certs/discover-cert.pem --key certs/discover-key.pem \
+     https://localhost:8443/security/mtls/status | python -m json.tool
+Expect:
+json{
+    "enabled": true,
+    "host": "0.0.0.0",
+    "port": 8443,
+    "cert_reqs": "required",
+    "min_tls_version": "TLSv1.2",
+    "server_cert": {"path": "certs/server-cert.pem", "exists": true},
+    "client_ca":   {"path": "certs/ca-cert.pem",   "exists": true},
+    "allowed_clients": [
+        {"name": "discover", "common_name": "discover.payments.client", ...},
+        {"name": "visa",     "common_name": "visa.payments.client", ...},
+        {"name": "amex",     "common_name": "amex.payments.client", ...}
+    ],
+    "ready": true
+}
+ready: true = ✅ everything in place.
+B8. Verify the mTLS audit log captured everything
+bashcurl --cacert certs/ca-cert.pem \
+     --cert certs/discover-cert.pem --key certs/discover-key.pem \
+     https://localhost:8443/security/mtls/audit | python -c "
+import json, sys
+d = json.load(sys.stdin)
+print(f'Total entries: {d[\"total\"]}')
+for e in d['entries'][:10]:
+    print(f'  {e[\"timestamp_utc\"]:30s} {e[\"decision\"]:25s} path={e[\"path\"]:30s} client={e.get(\"client_name\")}')
+"
+Expect entries like:
+  2026-05-16T...  accepted                  path=/security/whoami     client=discover
+  2026-05-16T...  accepted                  path=/health              client=discover
+  2026-05-16T...  rejected_no_cert          path=/health              client=None
+✅ Every handshake — accept and reject — is on the compliance audit trail.
+B9. Negative test — try a cert that's NOT in the allow-list
+Quick way to prove allow-list enforcement (not just CA trust):
+bash# Generate an extra cert with a non-allow-listed CN, signed by the SAME CA
+python scripts/gen_dev_certs.py --clients "stripe" --force
+# This creates certs/stripe-cert.pem — CA-trusted but NOT in allowed_clients
+
+# Try classifying with it on an ENFORCED path
+curl --cacert certs/ca-cert.pem \
+     --cert certs/stripe-cert.pem --key certs/stripe-key.pem \
+     -X POST https://localhost:8443/classify \
+     -H 'Content-Type: application/json' \
+     -d '{"text":"hello"}'
+Expect:
+json{"error":"client certificate not on allow-list","reason":"identity does not match any allowed_clients entry","cn":"stripe.payments.client"}
+HTTP status 403. ✅ Server accepted the TLS handshake (CA trust valid) but rejected the request (identity not allow-listed). That's the precise behavior the PS requires for payments clients.
+
+Cheat sheet — which files prove which thing works
+Want to verifyWhere to lookRetraining ran for reallogs/retraining_runs/<run_id>/train.log (full stdout) and state.jsonApproval gate enforcedlogs/retraining_audit.jsonl — every state transition is loggedMLflow logged the runlogs/mlruns.db (if mlflow installed) or logs/experiments.jsonl fallbackDrift triggered SLAlogs/drift_sla_cases.jsonl (one JSON line per case)SLA case linked to runSame file, look for closed_by_run_id fieldmTLS handshakes auditedlogs/mtls_audit.jsonl (every accept + reject)Certs in placecerts/ directory — openssl x509 -in <cert>.pem -noout -subject to inspect
+
+If anything doesn't match the expected output above, paste me the actual response and I'll debug it. The most common gotchas:
+
+Wrong directory — make sure you're in the upgraded datashield/ from the zip, not a previous version
+mTLS port confusion — when enabled: true, the API binds :8443 not :8000
+curl -k won't work for client-cert tests — -k skips server cert verification but you still need --cert/--key for the client side
+Browser at https://localhost:8443/docs — browsers won't send a client cert by default; use curl for testing, or import the client cert into your browser's keystore
