@@ -1,314 +1,89 @@
-Good question — let me walk you through verifying both end-to-end on the upgraded zip. I'll give you copy-pasteable commands and tell you exactly what "working" looks like.
+Ingestion Layer (ingestion.py)
+What it does
 
-Setup (one-time)
-bash# 1. Extract the zip
-unzip datashield_mtls_retraining.zip
-cd datashield
+Takes raw files and converts them into readable text.
 
-# 2. Install deps
-pip install -r requirements.txt
+Input
+PDF
+DOCX
+TXT
+CSV
+JSON
+HTML
+Logs, etc.
+Main tasks
+Detect file type
+Open file using correct parser
+Extract text
+Collect metadata (filename, file type, size)
+Output
+Raw extracted text + metadata
+Purpose
 
-# 3. Start the API
-python api.py
-# Leave this terminal running. Open a SECOND terminal for the commands below.
-You should see in the API terminal:
-[API] Starting DataShield API on http://127.0.0.1:8000
-[API] Docs at http://127.0.0.1:8000/docs
-That's plain HTTP — mTLS is off by default. Good. We'll turn it on in Part B.
+Makes enterprise documents usable for NLP/ML models.
 
-Part A — Verify the Retraining workflow
-This part doesn't need mTLS. Keep the API on plain HTTP for now.
-A1. Confirm the new endpoints exist
-bashcurl -s http://localhost:8000/openapi.json | python -c "
-import json, sys
-spec = json.load(sys.stdin)
-for path in sorted(spec['paths']):
-    if 'retrain' in path or 'drift' in path or 'security' in path:
-        for method in spec['paths'][path]:
-            print(f'{method.upper():6s} {path}')
-"
-What you should see — every endpoint below is present:
-GET    /mlops/drift
-GET    /mlops/drift/sla
-POST   /mlops/retrain
-GET    /mlops/retrain/audit
-GET    /mlops/retrain/runs
-GET    /mlops/retrain/runs/{run_id}
-GET    /mlops/retrain/runs/{run_id}/log
-GET    /security/mtls/audit
-GET    /security/mtls/status
-GET    /security/whoami
-If any are missing → the upgraded files aren't being picked up. Double-check you're in the upgraded datashield/ folder.
-A2. Verify the approval gate (Constraint C4)
-This MUST reject — proves dual-approval enforcement is alive:
-bash# (a) No approvers at all → 403
-curl -s -X POST http://localhost:8000/mlops/retrain \
-  -H 'Content-Type: application/json' \
-  -d '{"approvers": [], "reason": "test"}' | python -m json.tool
-Expect: "detail": "No approvers supplied — Constraint C4 requires..."
-bash# (b) Only Legal, missing DataGov → 403
-curl -s -X POST http://localhost:8000/mlops/retrain \
-  -H 'Content-Type: application/json' \
-  -d '{"approvers":[{"name":"Alice","role":"Legal"}],"reason":"test"}' | python -m json.tool
-Expect: "detail": "Insufficient approvers. Need at least one Legal AND one Data Governance approver..."
-If both return errors like above → ✅ approval gate works.
-A3. Launch a real retraining run
-bashcurl -s -X POST http://localhost:8000/mlops/retrain \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "approvers": [
-      {"name": "Alice Legal",  "role": "Legal"},
-      {"name": "Bob DataGov",  "role": "DataGov"}
-    ],
-    "reason": "verification run",
-    "args": ["--sample", "200", "--skip-transformer"],
-    "requested_by": "me@test"
-  }' | python -m json.tool
-Expected response (immediate, ~50ms):
-json{
-    "run_id": "20260516T120000-abc12345",   ← copy this
-    "status": "queued",
-    "requested_at_utc": "...",
-    "approvers": [...],
-    "cli_args": ["--sample", "200", "--skip-transformer"],
-    "log_path": "logs/retraining_runs/.../train.log",
-    "sla_case_id": null
-}
-✅ The API returns immediately — training runs in the background.
-A4. Watch the run progress
-Replace RUN_ID with the value from A3:
-bashRUN_ID="20260516T120000-abc12345"   # ← paste yours
+2. Preprocessing Layer (preprocessing.py)
+What it does
 
-# Poll status — status will go queued → running → succeeded
-watch -n 2 "curl -s http://localhost:8000/mlops/retrain/runs/$RUN_ID | python -m json.tool | head -20"
-You'll see status transition. Press Ctrl+C when it shows "status": "succeeded".
-A5. Verify the training log was captured
-bashcurl -s "http://localhost:8000/mlops/retrain/runs/$RUN_ID/log?tail=40" | python -c "
-import json, sys
-d = json.load(sys.stdin)
-print('=== last', d['lines_returned'], 'lines of', d['total_lines'], 'total ===')
-print(d['log'])
-"
-You should see actual train_all.py output: per-language [train:en] lines, classification_report tables, F1 scores. That proves a real subprocess ran — not a stub.
-A6. Verify metrics were captured back into the system
-bashcurl -s http://localhost:8000/mlops/retrain/runs/$RUN_ID | python -c "
-import json, sys
-state = json.load(sys.stdin)
-print('Status:    ', state['status'])
-print('Exit code: ', state['exit_code'])
-print('MLflow:    ', state.get('mlflow_logged'))
-print()
-summary = state.get('summary') or {}
-print('Languages trained:', summary.get('aggregate', {}).get('languages_trained'))
-print('Avg macro-F1:    ', summary.get('aggregate', {}).get('macro_f1_stacker_avg'))
-print()
-for lang_s in summary.get('per_language', []):
-    print(f'  {lang_s[\"lang\"]}: F1 LR={lang_s[\"macro_f1_lr\"]:.3f} '
-          f'XGB={lang_s[\"macro_f1_xgb\"]:.3f} stacker={lang_s[\"macro_f1_stacker\"]:.3f}')
-"
-Expect output like:
-Status:     succeeded
-Exit code:  0
-MLflow:     True
-Languages trained: ['en', 'hi']
-Avg macro-F1:    0.91
+Cleans and prepares the extracted text for machine learning.
 
-  en: F1 LR=0.890 XGB=0.910 stacker=0.920
-  hi: F1 LR=0.870 XGB=0.890 stacker=0.900
-✅ Means the orchestrator parsed artifacts/summaries.json and threaded the metrics back.
-A7. Verify the audit trail
-bashcurl -s "http://localhost:8000/mlops/retrain/audit?limit=10" | python -c "
-import json, sys
-d = json.load(sys.stdin)
-for e in d['entries']:
-    print(f'  {e[\"timestamp_utc\"]:30s} {e[\"event\"]:20s} run={e.get(\"run_id\",\"\")[:20]}')
-"
-Expect three events per run, newest first:
-  ...   run_succeeded         run=20260516T120000-...
-  ...   run_started           run=20260516T120000-...
-  ...   run_submitted         run=20260516T120000-...
-✅ Full state transition trail = governance ready.
-A8. Verify the Drift SLA workflow (drift → SLA case → retrain → auto-close)
-This is the marquee feature — the chain that proves everything is wired together:
-bash# (a) Force a drift report
-curl -s http://localhost:8000/mlops/drift | python -c "
-import json, sys
-r = json.load(sys.stdin)
-print('PSI score:        ', r.get('psi_score'))
-print('Drift detected:   ', r.get('drift_detected'))
-print('Drift critical:   ', r.get('drift_critical'))
-print('Recommendation:   ', r.get('recommendation'))
-"
-bash# (b) Check SLA dashboard
-curl -s http://localhost:8000/mlops/drift/sla | python -c "
-import json, sys
-d = json.load(sys.stdin)
-print('Summary:', d['summary'])
-print('Open cases:', len(d['open_cases']))
-for c in d['open_cases']:
-    print(f'  {c[\"case_id\"]} deadline={c[\"deadline_utc\"]} hours_remaining={c[\"hours_remaining\"]}')
-"
-If drift is critical, an SLA case will open automatically with a 48-hour deadline. Now launch a retraining linked to it:
-bash# (c) Grab the case_id if one exists, otherwise skip this step
-CASE_ID=$(curl -s http://localhost:8000/mlops/drift/sla | python -c "
-import json, sys
-d = json.load(sys.stdin)
-if d['open_cases']:
-    print(d['open_cases'][0]['case_id'])
-")
-echo "Open case: $CASE_ID"
+Main tasks
+Clean noisy text
+Detect language (English/Hindi)
+Mask sensitive data (PII)
+Tokenize text into words
+Split long text into chunks
+Enrich metadata using business hints
+Output
+Structured NLP-ready document
 
-# (d) Retrain with the SLA case linkage
-curl -s -X POST http://localhost:8000/mlops/retrain \
-  -H 'Content-Type: application/json' \
-  -d "{
-    \"approvers\": [{\"name\":\"A\",\"role\":\"Legal\"},{\"name\":\"B\",\"role\":\"DataGov\"}],
-    \"reason\": \"closing drift SLA $CASE_ID\",
-    \"sla_case_id\": \"$CASE_ID\",
-    \"args\": [\"--sample\", \"200\", \"--skip-transformer\"]
-  }" | python -m json.tool
-Wait until status is succeeded, then:
-bash# (e) Verify the SLA case was auto-closed and linked to the run
-curl -s http://localhost:8000/mlops/drift/sla | python -c "
-import json, sys
-d = json.load(sys.stdin)
-print('Open cases after retrain:', len(d['open_cases']))
-print()
-print('Recent case history:')
-for c in d['all_cases'][:3]:
-    print(f'  {c[\"case_id\"]}: status={c[\"status\"]} closed_by_run_id={c.get(\"closed_by_run_id\")}')
-"
-✅ You should see the open case is now status=resolved with closed_by_run_id pointing at your retraining run. The full drift → retrain → close loop is verified.
+Contains:
 
-Part B — Verify mTLS (Constraint C5)
-Stop the API (Ctrl+C in the API terminal). We're switching to TLS mode.
-B1. Mint dev certs
-bashpython scripts/gen_dev_certs.py
-Expect:
-[gen_dev_certs] minting new CA → certs/ca-cert.pem
-[gen_dev_certs] wrote server cert (CN=localhost) → certs/server-cert.pem
-[gen_dev_certs] wrote client cert (CN=discover.payments.client) → certs/discover-cert.pem
-[gen_dev_certs] wrote client cert (CN=visa.payments.client) → certs/visa-cert.pem
-[gen_dev_certs] wrote client cert (CN=amex.payments.client) → certs/amex-cert.pem
-Verify the certs are real X.509:
-bashopenssl x509 -in certs/discover-cert.pem -noout -subject -issuer -ext subjectAltName 2>/dev/null
-You should see:
-subject=C = US, ST = Dev, L = Local, O = Payments Client, OU = Payments, CN = discover.payments.client
-issuer=C = US, ST = Dev, L = Local, O = DataShield Dev CA, OU = Security, CN = DataShield Local Dev CA
-X509v3 Subject Alternative Name:
-    DNS:discover.payments.client, DNS:discover-api.example.com
-✅ CN=discover.payments.client, OU=Payments, issued by your dev CA.
-B2. Enable mTLS
-Edit configs/mtls.yaml:
-yamlmtls:
-  enabled: true          # ← change from false
-(Leave everything else default.)
-B3. Start the API with mTLS
-bashpython api.py
-Expect:
-[API] Starting DataShield API on https://0.0.0.0:8443
-[API] Docs at https://0.0.0.0:8443/docs
-[API] mTLS ENABLED — server cert=certs/server-cert.pem, client CA=certs/ca-cert.pem, cert_reqs=VerifyMode.CERT_REQUIRED
-✅ Note the https://...:8443 and the mTLS ENABLED line. If you see this, TLS is bound. In a separate terminal:
-B4. Try without a client cert → should be rejected
-bashcurl -k https://localhost:8443/health
-Expect a TLS handshake error:
-curl: (35) ... alert certificate required
-✅ Server demanded a cert and refused without one.
-B5. Connect with a valid client cert
-bashcurl --cacert certs/ca-cert.pem \
-     --cert certs/discover-cert.pem \
-     --key  certs/discover-key.pem \
-     https://localhost:8443/health
-Expect:
-json{"status":"ok","pipeline_loaded":false,"timestamp_utc":"..."}
-✅ TLS handshake succeeded, certs accepted.
-B6. Verify the identity is being read correctly
-bashcurl --cacert certs/ca-cert.pem \
-     --cert certs/discover-cert.pem --key certs/discover-key.pem \
-     https://localhost:8443/security/whoami | python -m json.tool
-Expect:
-json{
-    "client_identity": {
-        "common_name": "discover.payments.client",
-        "organizational_unit": "Payments",
-        "organization": "Payments Client",
-        "subject_alt_names": ["discover.payments.client", "discover-api.example.com"],
-        "fingerprint_sha256": "abc123...",
-        "issuer_cn": "DataShield Local Dev CA",
-        ...
-    },
-    "client_name": "discover",
-    "mtls_enabled": true
-}
-✅ Server identified you as Discover via the allow-list match. Try Visa to double-check:
-bashcurl --cacert certs/ca-cert.pem \
-     --cert certs/visa-cert.pem --key certs/visa-key.pem \
-     https://localhost:8443/security/whoami | python -c "
-import json, sys
-d = json.load(sys.stdin)
-print('client_name:', d['client_name'])
-print('cn:', d['client_identity']['common_name'])
-"
-Expect: client_name: visa, cn: visa.payments.client. ✅
-B7. Check the mTLS configuration snapshot
-bashcurl --cacert certs/ca-cert.pem \
-     --cert certs/discover-cert.pem --key certs/discover-key.pem \
-     https://localhost:8443/security/mtls/status | python -m json.tool
-Expect:
-json{
-    "enabled": true,
-    "host": "0.0.0.0",
-    "port": 8443,
-    "cert_reqs": "required",
-    "min_tls_version": "TLSv1.2",
-    "server_cert": {"path": "certs/server-cert.pem", "exists": true},
-    "client_ca":   {"path": "certs/ca-cert.pem",   "exists": true},
-    "allowed_clients": [
-        {"name": "discover", "common_name": "discover.payments.client", ...},
-        {"name": "visa",     "common_name": "visa.payments.client", ...},
-        {"name": "amex",     "common_name": "amex.payments.client", ...}
-    ],
-    "ready": true
-}
-ready: true = ✅ everything in place.
-B8. Verify the mTLS audit log captured everything
-bashcurl --cacert certs/ca-cert.pem \
-     --cert certs/discover-cert.pem --key certs/discover-key.pem \
-     https://localhost:8443/security/mtls/audit | python -c "
-import json, sys
-d = json.load(sys.stdin)
-print(f'Total entries: {d[\"total\"]}')
-for e in d['entries'][:10]:
-    print(f'  {e[\"timestamp_utc\"]:30s} {e[\"decision\"]:25s} path={e[\"path\"]:30s} client={e.get(\"client_name\")}')
-"
-Expect entries like:
-  2026-05-16T...  accepted                  path=/security/whoami     client=discover
-  2026-05-16T...  accepted                  path=/health              client=discover
-  2026-05-16T...  rejected_no_cert          path=/health              client=None
-✅ Every handshake — accept and reject — is on the compliance audit trail.
-B9. Negative test — try a cert that's NOT in the allow-list
-Quick way to prove allow-list enforcement (not just CA trust):
-bash# Generate an extra cert with a non-allow-listed CN, signed by the SAME CA
-python scripts/gen_dev_certs.py --clients "stripe" --force
-# This creates certs/stripe-cert.pem — CA-trusted but NOT in allowed_clients
+cleaned text
+masked text
+tokens
+chunks
+detected language
+metadata
+Purpose
 
-# Try classifying with it on an ENFORCED path
-curl --cacert certs/ca-cert.pem \
-     --cert certs/stripe-cert.pem --key certs/stripe-key.pem \
-     -X POST https://localhost:8443/classify \
-     -H 'Content-Type: application/json' \
-     -d '{"text":"hello"}'
-Expect:
-json{"error":"client certificate not on allow-list","reason":"identity does not match any allowed_clients entry","cn":"stripe.payments.client"}
-HTTP status 403. ✅ Server accepted the TLS handshake (CA trust valid) but rejected the request (identity not allow-listed). That's the precise behavior the PS requires for payments clients.
+Transforms messy human text into normalized structured data.
 
-Cheat sheet — which files prove which thing works
-Want to verifyWhere to lookRetraining ran for reallogs/retraining_runs/<run_id>/train.log (full stdout) and state.jsonApproval gate enforcedlogs/retraining_audit.jsonl — every state transition is loggedMLflow logged the runlogs/mlruns.db (if mlflow installed) or logs/experiments.jsonl fallbackDrift triggered SLAlogs/drift_sla_cases.jsonl (one JSON line per case)SLA case linked to runSame file, look for closed_by_run_id fieldmTLS handshakes auditedlogs/mtls_audit.jsonl (every accept + reject)Certs in placecerts/ directory — openssl x509 -in <cert>.pem -noout -subject to inspect
+3. Feature Engineering Layer (feature_engineering.py)
+What it does
 
-If anything doesn't match the expected output above, paste me the actual response and I'll debug it. The most common gotchas:
+Converts processed text into numerical ML features.
 
-Wrong directory — make sure you're in the upgraded datashield/ from the zip, not a previous version
-mTLS port confusion — when enabled: true, the API binds :8443 not :8000
-curl -k won't work for client-cert tests — -k skips server cert verification but you still need --cert/--key for the client side
-Browser at https://localhost:8443/docs — browsers won't send a client cert by default; use curl for testing, or import the client cert into your browser's keystore
+Main tasks
+Generate TF-IDF features
+Extract important keywords
+Create n-gram statistics
+Compute numeric features
+Generate embedding statistics
+Output
+FeatureSummary object
+
+Contains:
+
+top keywords
+token statistics
+numeric signals
+embedding info
+Purpose
+
+Transforms text into machine-readable numerical representations for models.
+
+Simple End-to-End Flow
+File Upload
+    ↓
+Ingestion
+(extract text)
+    ↓
+Preprocessing
+(clean + structure text)
+    ↓
+Feature Engineering
+(convert to ML features)
+    ↓
+Models
+(classification)
